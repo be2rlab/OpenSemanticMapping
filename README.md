@@ -12,6 +12,6 @@
 
 ### Build docker
 ```bash
-sudo concept-graphs
+cd concept-graphs
 make build concept-graphs
 ```
