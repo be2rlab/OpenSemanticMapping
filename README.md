@@ -3,12 +3,12 @@
 ## Contents:
 - Concept-Graphs 
 - Concept-Fusion (Todo)
-- Open-Fusion
-- OpenMask3D
-- OVSG
-- OVIR-3D
-- Semantic Abstraction
-- PLA
+- Open-Fusion (Todo)
+- OpenMask3D (Todo)
+- OVSG (Todo)
+- OVIR-3D (Todo)
+- Semantic Abstraction (Todo)
+- PLA (Todo)
 
 ### Build docker
 ```bash
