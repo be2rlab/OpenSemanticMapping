@@ -179,6 +179,9 @@ def main(cfg : DictConfig):
         # Get the depth image
         depth_tensor = depth_tensor[..., 0]
         depth_array = depth_tensor.cpu().numpy()
+        # depth_array = np.mean(depth_array, -1) #    0.2989 * depth_array[:,:,0] + 0.5870 * depth_array[:,:,1] + 0.1140 * depth_array[:,:,2]
+
+        # print(f"######################## -->> Depth Array shape: {depth_array.shape}")
 
         # Get the intrinsics matrix
         cam_K = intrinsics.cpu().numpy()[:3, :3]

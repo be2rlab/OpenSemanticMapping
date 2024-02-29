@@ -7,7 +7,7 @@ tracking:
   ignore_edge_W: 100
   ignore_edge_H: 100
   seperate_LR: False
-  const_speed_assumption: False
+  const_speed_assumption: True
   lr: 0.001
   pixels: 200
   iters: 10
@@ -23,11 +23,11 @@ mapping:
   iters_first: 1500
   iters: 60
 camera_params:
-  image_height: 360
-  image_width: 640
-  fx: 263.107696535 #526.21539307 #315.729235842
-  fy: 263.107696535 #526.21539307 #356.657099747
-  cx: 321.1545105 #642.309021 #385.3854126
-  cy: 184.3497465 #368.69949341 #249.896323311
-  png_depth_scale: 6553.5  #for depth image in png format
+  image_height: 680
+  image_width: 1200
+  fx: 600.0
+  fy: 600.0
+  cx: 599.5
+  cy: 339.5
+  png_depth_scale: 6553.5 #for depth image in png format
   crop_edge: 0

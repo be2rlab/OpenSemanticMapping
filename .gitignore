@@ -1,1 +1,7 @@
-concept-graphs/assets/*
+assets/sam_models/*
+assets/llm/*
+datasets/data/*
+Readme_files/*
+concept-graphs/yolov8l-world.pt
+concept-graphs/outputs/*
+assets.zip

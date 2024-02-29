@@ -148,7 +148,7 @@ def main(args):
         clip_tokenizer = open_clip.get_tokenizer("ViT-H-14")
         print("Done initializing CLIP model.")
 
-    cmap = matplotlib.colormaps.get_cmap("turbo")
+    cmap = matplotlib.cm.get_cmap("turbo")
     
     if bg_objects is not None:
         indices_bg = np.arange(len(objects), len(objects) + len(bg_objects))

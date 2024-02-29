@@ -2,6 +2,7 @@ import copy
 from typing import Iterable
 import dataclasses
 from PIL import Image
+import cv2
 
 import numpy as np
 import matplotlib
@@ -211,10 +212,20 @@ def vis_result_fast(
     mask_annotator = sv.MaskAnnotator(
         color = color
     )
-    labels = [
-        f"{classes[class_id]} {confidence:0.2f}" 
-        for _, _, confidence, class_id, _ 
-        in detections]
+
+    if hasattr(detections, 'confidence') and hasattr(detections, 'class_id'):
+        confidences = detections.confidence
+        class_ids = detections.class_id
+        if confidences is not None:
+            labels = [
+                f"{classes[class_id]} {confidence:0.2f}"
+                for confidence, class_id in zip(confidences, class_ids)
+            ]
+        else:
+            labels = [f"{classes[class_id]}" for class_id in class_ids]
+    else:
+        print("Detections object does not have 'confidence' or 'class_id' attributes or one of them is missing.")
+
     
     if instance_random_color:
         # generate random colors for each segmentation
@@ -362,6 +373,33 @@ def normalized(a, axis=-1, order=2):
     l2 = np.atleast_1d(np.linalg.norm(a, order, axis))
     l2[l2 == 0] = 1
     return a / np.expand_dims(l2, axis), l2
+
+def save_video_detections(exp_out_path, save_path=None, fps=30):
+    '''
+    Save the detections in the folder as a video
+    '''
+    if save_path is None:
+        save_path = exp_out_path / "vis_video.mp4"
+    
+    # Get the list of images
+    image_files = list((exp_out_path / "vis").glob("*.jpg"))
+    image_files.sort()
+    
+    # Read the first image to get the size
+    image = Image.open(image_files[0])
+    width, height = image.size
+    
+    # Create the video writer
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(str(save_path), fourcc, fps, (width, height))
+    
+    # Write the images to the video
+    for image_file in image_files:
+        image = cv2.imread(str(image_file))
+        out.write(image)
+    
+    out.release()
+    print(f"Video saved at {save_path}")
 
 
 class LineMesh(object):

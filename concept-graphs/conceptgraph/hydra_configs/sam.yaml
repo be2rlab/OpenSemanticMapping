@@ -1,0 +1,4 @@
+sam_variant: sam # sam
+sam_encoder_version: "vit_h"
+sam_checkpoint_path: /assets/sam_models/sam_vit_h_4b8939.pth
+mobile_sam_path: /assets/sam_models/mobile_sam.pt

@@ -1,7 +1,7 @@
-'''
+"""
 The script is used to extract Grounded SAM results on a posed RGB-D dataset. 
 The results will be dumped to a folder under the scene folder. 
-'''
+"""
 
 import os
 import argparse
@@ -13,6 +13,7 @@ import cv2
 import json
 import imageio
 import matplotlib
+
 matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 import numpy as np
@@ -20,6 +21,7 @@ import pickle
 import gzip
 import open_clip
 
+from ultralytics import YOLO
 import torch
 import torchvision
 from torch.utils.data import Dataset
@@ -31,11 +33,17 @@ from conceptgraph.utils.vis import vis_result_fast, vis_result_slow_caption
 import torch.nn.functional as F
 
 
-try: 
+try:
     from groundingdino.util.inference import Model
-    from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
+    from segment_anything import (
+        sam_model_registry,
+        SamPredictor,
+        SamAutomaticMaskGenerator,
+    )
 except ImportError as e:
-    print("Import Error: Please install Grounded Segment Anything following the instructions in README.")
+    print(
+        "Import Error: Please install Grounded Segment Anything following the instructions in README."
+    )
     raise e
 
 # Set up some path used in this script
@@ -43,57 +51,75 @@ except ImportError as e:
 if "GSA_PATH" in os.environ:
     GSA_PATH = os.environ["GSA_PATH"]
 else:
-    raise ValueError("Please set the GSA_PATH environment variable to the path of the GSA repo. ")
-    
+    raise ValueError(
+        "Please set the GSA_PATH environment variable to the path of the GSA repo. "
+    )
+
 import sys
-TAG2TEXT_PATH = os.path.join(GSA_PATH, "Tag2Text")
+
+RECOGNIZE_ANYTHING_PATH = os.path.join(GSA_PATH, "recognize-anything")
+TAG2TEXT_PATH = os.path.join(GSA_PATH, "")
 EFFICIENTSAM_PATH = os.path.join(GSA_PATH, "EfficientSAM")
-sys.path.append(GSA_PATH) # This is needed for the following imports in this file
-sys.path.append(TAG2TEXT_PATH) # This is needed for some imports in the Tag2Text files
+sys.path.append(GSA_PATH)  # This is needed for the following imports in this file
+sys.path.append(TAG2TEXT_PATH)  # This is needed for some imports in the Tag2Text files
 sys.path.append(EFFICIENTSAM_PATH)
+sys.path.append(RECOGNIZE_ANYTHING_PATH)
+
+import torchvision.transforms as TS
+
 try:
-    from ram.models import tag2text, ram
+    from ram.models import ram
+    from ram.models import tag2text
     from ram import inference_tag2text, inference_ram
-    import torchvision.transforms as TS
 except ImportError as e:
-    print("Tag2text sub-package not found. Please check your GSA_PATH. ")
+    print("RAM sub-package not found. Please check your GSA_PATH. ")
     raise e
 
 # Disable torch gradient computation
 torch.set_grad_enabled(False)
-    
+ASSETS_PATH = "/assets/sam_models/"
 # GroundingDINO config and checkpoint
-GROUNDING_DINO_CONFIG_PATH = os.path.join(GSA_PATH, "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py")
-GROUNDING_DINO_CHECKPOINT_PATH = os.path.join(GSA_PATH, "./groundingdino_swint_ogc.pth")
+GROUNDING_DINO_CONFIG_PATH = os.path.join(
+    GSA_PATH, "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+)
+GROUNDING_DINO_CHECKPOINT_PATH = os.path.join(ASSETS_PATH, "./groundingdino_swint_ogc.pth")
 
 # Segment-Anything checkpoint
 SAM_ENCODER_VERSION = "vit_h"
-SAM_CHECKPOINT_PATH = os.path.join(GSA_PATH, "./sam_vit_h_4b8939.pth")
+SAM_CHECKPOINT_PATH = os.path.join(ASSETS_PATH, "./sam_vit_h_4b8939.pth")
 
 # Tag2Text checkpoint
-TAG2TEXT_CHECKPOINT_PATH = os.path.join(GSA_PATH, "tag2text_swin_14m.pth")
-RAM_CHECKPOINT_PATH = os.path.join(GSA_PATH, "ram_swin_large_14m.pth")
+TAG2TEXT_CHECKPOINT_PATH = os.path.join(ASSETS_PATH, "./tag2text_swin_14m.pth")
+RAM_CHECKPOINT_PATH = os.path.join(ASSETS_PATH, "./ram_swin_large_14m.pth")
 
 FOREGROUND_GENERIC_CLASSES = [
-    "item", "furniture", "object", "electronics", "wall decoration", "door"
+    "item",
+    "furniture",
+    "object",
+    "electronics",
+    "wall decoration",
+    "door",
 ]
 
-FOREGROUND_MINIMAL_CLASSES = [
-    "item"
-]
+FOREGROUND_MINIMAL_CLASSES = ["item"]
+
 
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset_root", type=Path, required=True,
+        "--dataset_root",
+        type=Path,
+        required=True,
     )
     parser.add_argument(
-        "--dataset_config", type=str, required=True,
-        help="This path may need to be changed depending on where you run this script. "
+        "--dataset_config",
+        type=str,
+        required=True,
+        help="This path may need to be changed depending on where you run this script. ",
     )
-    
+
     parser.add_argument("--scene_id", type=str, default="train_3")
-    
+
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--end", type=int, default=-1)
     parser.add_argument("--stride", type=int, default=1)
@@ -105,43 +131,72 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--text_threshold", type=float, default=0.25)
     parser.add_argument("--nms_threshold", type=float, default=0.5)
 
-    parser.add_argument("--class_set", type=str, default="scene", 
-                        choices=["scene", "generic", "minimal", "tag2text", "ram", "none"], 
-                        help="If none, no tagging and detection will be used and the SAM will be run in dense sampling mode. ")
-    parser.add_argument("--add_bg_classes", action="store_true", 
-                        help="If set, add background classes (wall, floor, ceiling) to the class set. ")
-    parser.add_argument("--accumu_classes", action="store_true",
-                        help="if set, the class set will be accumulated over frames")
+    parser.add_argument(
+        "--class_set",
+        type=str,
+        default="scene",
+        choices=["scene", "generic", "minimal", "tag2text", "ram", "none"],
+        help="If none, no tagging and detection will be used and the SAM will be run in dense sampling mode. ",
+    )
+    parser.add_argument(
+        "--detector",
+        type=str,
+        default="yolo",
+        choices=["yolo", "dino"],
+        help="When given classes, whether to use YOLO-World or GroundingDINO to detect objects. ",
+    )
+    parser.add_argument(
+        "--add_bg_classes",
+        action="store_true",
+        help="If set, add background classes (wall, floor, ceiling) to the class set. ",
+    )
+    parser.add_argument(
+        "--accumu_classes",
+        action="store_true",
+        help="if set, the class set will be accumulated over frames",
+    )
 
-    parser.add_argument("--sam_variant", type=str, default="sam",
-                        choices=['fastsam', 'mobilesam', "lighthqsam"])
-    
+    parser.add_argument(
+        "--sam_variant",
+        type=str,
+        default="sam",
+        choices=["fastsam", "mobilesam", "lighthqsam"],
+    )
+
     parser.add_argument("--save_video", action="store_true")
-    
+
     parser.add_argument("--device", type=str, default="cuda")
-    
-    parser.add_argument("--use_slow_vis", action="store_true", 
-                        help="If set, use vis_result_slow_caption. Only effective when using ram/tag2text. ")
-    
-    parser.add_argument("--exp_suffix", type=str, default=None,
-                        help="The suffix of the folder that the results will be saved to. ")
-    
+
+    parser.add_argument(
+        "--use_slow_vis",
+        action="store_true",
+        help="If set, use vis_result_slow_caption. Only effective when using ram/tag2text. ",
+    )
+
+    parser.add_argument(
+        "--exp_suffix",
+        type=str,
+        default=None,
+        help="The suffix of the folder that the results will be saved to. ",
+    )
+
     return parser
 
 
-def compute_clip_features(image, detections, clip_model, clip_preprocess, clip_tokenizer, classes, device):
+def compute_clip_features(
+    image, detections, clip_model, clip_preprocess, clip_tokenizer, classes, device
+):
     backup_image = image.copy()
-    
+
     image = Image.fromarray(image)
-    
+
     # padding = args.clip_padding  # Adjust the padding amount as needed
     padding = 20  # Adjust the padding amount as needed
-    
+
     image_crops = []
     image_feats = []
     text_feats = []
 
-    
     for idx in range(len(detections.xyxy)):
         # Get the crop of the mask with padding
         x_min, y_min, x_max, y_max = detections.xyxy[idx]
@@ -160,25 +215,25 @@ def compute_clip_features(image, detections, clip_model, clip_preprocess, clip_t
         y_max += bottom_padding
 
         cropped_image = image.crop((x_min, y_min, x_max, y_max))
-        
-        # Get the preprocessed image for clip from the crop 
+
+        # Get the preprocessed image for clip from the crop
         preprocessed_image = clip_preprocess(cropped_image).unsqueeze(0).to("cuda")
 
         crop_feat = clip_model.encode_image(preprocessed_image)
         crop_feat /= crop_feat.norm(dim=-1, keepdim=True)
-        
+
         class_id = detections.class_id[idx]
         tokenized_text = clip_tokenizer([classes[class_id]]).to("cuda")
         text_feat = clip_model.encode_text(tokenized_text)
         text_feat /= text_feat.norm(dim=-1, keepdim=True)
-        
+
         crop_feat = crop_feat.cpu().numpy()
         text_feat = text_feat.cpu().numpy()
 
         image_crops.append(cropped_image)
         image_feats.append(crop_feat)
         text_feats.append(text_feat)
-        
+
     # turn the list of feats into np matrices
     image_feats = np.concatenate(image_feats, axis=0)
     text_feats = np.concatenate(text_feats, axis=0)
@@ -187,14 +242,13 @@ def compute_clip_features(image, detections, clip_model, clip_preprocess, clip_t
 
 
 # Prompting SAM with detected boxes
-def get_sam_segmentation_from_xyxy(sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray) -> np.ndarray:
+def get_sam_segmentation_from_xyxy(
+    sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray
+) -> np.ndarray:
     sam_predictor.set_image(image)
     result_masks = []
     for box in xyxy:
-        masks, scores, logits = sam_predictor.predict(
-            box=box,
-            multimask_output=True
-        )
+        masks, scores, logits = sam_predictor.predict(box=box, multimask_output=True)
         index = np.argmax(scores)
         result_masks.append(masks[index])
     return np.array(result_masks)
@@ -206,52 +260,57 @@ def get_sam_predictor(variant: str, device: str | int) -> SamPredictor:
         sam.to(device)
         sam_predictor = SamPredictor(sam)
         return sam_predictor
-    
+
     if variant == "mobilesam":
         from MobileSAM.setup_mobile_sam import setup_model
-        MOBILE_SAM_CHECKPOINT_PATH = os.path.join(GSA_PATH, "./EfficientSAM/mobile_sam.pt")
+
+        MOBILE_SAM_CHECKPOINT_PATH = os.path.join(
+            GSA_PATH, "./EfficientSAM/mobile_sam.pt"
+        )
         checkpoint = torch.load(MOBILE_SAM_CHECKPOINT_PATH)
         mobile_sam = setup_model()
         mobile_sam.load_state_dict(checkpoint, strict=True)
         mobile_sam.to(device=device)
-        
+
         sam_predictor = SamPredictor(mobile_sam)
         return sam_predictor
 
     elif variant == "lighthqsam":
         from LightHQSAM.setup_light_hqsam import setup_model
-        HQSAM_CHECKPOINT_PATH = os.path.join(GSA_PATH, "./EfficientSAM/sam_hq_vit_tiny.pth")
+
+        HQSAM_CHECKPOINT_PATH = os.path.join(
+            GSA_PATH, "./EfficientSAM/sam_hq_vit_tiny.pth"
+        )
         checkpoint = torch.load(HQSAM_CHECKPOINT_PATH)
         light_hqsam = setup_model()
         light_hqsam.load_state_dict(checkpoint, strict=True)
         light_hqsam.to(device=device)
-        
+
         sam_predictor = SamPredictor(light_hqsam)
         return sam_predictor
-        
+
     elif variant == "fastsam":
         raise NotImplementedError
     else:
         raise NotImplementedError
-    
 
 
 # The SAM based on automatic mask generation, without bbox prompting
 def get_sam_segmentation_dense(
-    variant:str, model: Any, image: np.ndarray
+    variant: str, model: Any, image: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    '''
+    """
     The SAM based on automatic mask generation, without bbox prompting
-    
+
     Args:
         model: The mask generator or the YOLO model
         image: )H, W, 3), in RGB color space, in range [0, 255]
-        
+
     Returns:
         mask: (N, H, W)
         xyxy: (N, 4)
         conf: (N,)
-    '''
+    """
     if variant == "sam":
         results = model.generate(image)
         mask = []
@@ -285,7 +344,9 @@ def get_sam_segmentation_dense(
         raise NotImplementedError
 
 
-def get_sam_mask_generator(variant:str, device: str | int) -> SamAutomaticMaskGenerator:
+def get_sam_mask_generator(
+    variant: str, device: str | int
+) -> SamAutomaticMaskGenerator:
     if variant == "sam":
         sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH)
         sam.to(device)
@@ -310,51 +371,55 @@ def get_sam_mask_generator(variant:str, device: str | int) -> SamAutomaticMaskGe
         raise NotImplementedError
 
 
-def process_tag_classes(text_prompt:str, add_classes:List[str]=[], remove_classes:List[str]=[]) -> list[str]:
-    '''
-    Convert a text prompt from Tag2Text to a list of classes. 
-    '''
-    classes = text_prompt.split(',')
+def process_tag_classes(
+    text_prompt: str, add_classes: List[str] = [], remove_classes: List[str] = []
+) -> list[str]:
+    """
+    Convert a text prompt from Tag2Text to a list of classes.
+    """
+    classes = text_prompt.split(",")
     classes = [obj_class.strip() for obj_class in classes]
-    classes = [obj_class for obj_class in classes if obj_class != '']
-    
+    classes = [obj_class for obj_class in classes if obj_class != ""]
+
     for c in add_classes:
         if c not in classes:
             classes.append(c)
-    
+
     for c in remove_classes:
         classes = [obj_class for obj_class in classes if c not in obj_class.lower()]
-    
+
     return classes
 
 
-def process_ai2thor_classes(classes: List[str], add_classes:List[str]=[], remove_classes:List[str]=[]) -> List[str]:
-    '''
+def process_ai2thor_classes(
+    classes: List[str], add_classes: List[str] = [], remove_classes: List[str] = []
+) -> List[str]:
+    """
     Some pre-processing on AI2Thor objectTypes in a scene
-    '''
+    """
     classes = list(set(classes))
-    
+
     for c in add_classes:
         classes.append(c)
-        
+
     for c in remove_classes:
         classes = [obj_class for obj_class in classes if c not in obj_class.lower()]
 
     # Split the element in classes by captical letters
     classes = [obj_class.replace("TV", "Tv") for obj_class in classes]
-    classes = [re.findall('[A-Z][^A-Z]*', obj_class) for obj_class in classes]
+    classes = [re.findall("[A-Z][^A-Z]*", obj_class) for obj_class in classes]
     # Join the elements in classes by space
     classes = [" ".join(obj_class) for obj_class in classes]
-    
+
     return classes
-    
-    
+
+
 def main(args: argparse.Namespace):
     ### Initialize the Grounding DINO model ###
     grounding_dino_model = Model(
-        model_config_path=GROUNDING_DINO_CONFIG_PATH, 
-        model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH, 
-        device=args.device
+        model_config_path=GROUNDING_DINO_CONFIG_PATH,
+        model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH,
+        device=args.device,
     )
 
     ### Initialize the SAM model ###
@@ -362,7 +427,7 @@ def main(args: argparse.Namespace):
         mask_generator = get_sam_mask_generator(args.sam_variant, args.device)
     else:
         sam_predictor = get_sam_predictor(args.sam_variant, args.device)
-    
+
     ###
     # Initialize the CLIP model
     clip_model, _, clip_preprocess = open_clip.create_model_and_transforms(
@@ -370,7 +435,7 @@ def main(args: argparse.Namespace):
     )
     clip_model = clip_model.to(args.device)
     clip_tokenizer = open_clip.get_tokenizer("ViT-H-14")
-    
+
     # Initialize the dataset
     dataset = get_dataset(
         dataconfig=args.dataset_config,
@@ -386,7 +451,10 @@ def main(args: argparse.Namespace):
     )
 
     global_classes = set()
-    
+
+    # Initialize a YOLO-World model
+    yolo_model_w_classes = YOLO("yolov8l-world.pt")  # or choose yolov8m/l-world.pt
+
     if args.class_set == "scene":
         # Load the object meta information
         obj_meta_path = args.dataset_root / args.scene_id / "obj_meta.json"
@@ -396,7 +464,7 @@ def main(args: argparse.Namespace):
         classes = process_ai2thor_classes(
             [obj["objectType"] for obj in obj_meta],
             add_classes=[],
-            remove_classes=['wall', 'floor', 'room', 'ceiling']
+            remove_classes=["wall", "floor", "room", "ceiling"],
         )
     elif args.class_set == "generic":
         classes = FOREGROUND_GENERIC_CLASSES
@@ -404,7 +472,7 @@ def main(args: argparse.Namespace):
         classes = FOREGROUND_MINIMAL_CLASSES
     elif args.class_set in ["tag2text", "ram"]:
         ### Initialize the Tag2Text or RAM model ###
-        
+
         if args.class_set == "tag2text":
             # The class set will be computed by tag2text on each image
             # filter out attributes and action categories which are difficult to grounding
@@ -412,33 +480,36 @@ def main(args: argparse.Namespace):
             for i in range(3012, 3429):
                 delete_tag_index.append(i)
 
-            specified_tags='None'
+            specified_tags = "None"
             # load model
-            tagging_model = tag2text.tag2text_caption(pretrained=TAG2TEXT_CHECKPOINT_PATH,
-                                                    image_size=384,
-                                                    vit='swin_b',
-                                                    delete_tag_index=delete_tag_index)
+            tagging_model = tag2text.tag2text_caption(
+                pretrained=TAG2TEXT_CHECKPOINT_PATH,
+                image_size=384,
+                vit="swin_b",
+                delete_tag_index=delete_tag_index,
+            )
             # threshold for tagging
             # we reduce the threshold to obtain more tags
-            tagging_model.threshold = 0.64 
+            tagging_model.threshold = 0.64
         elif args.class_set == "ram":
-            tagging_model = ram(pretrained=RAM_CHECKPOINT_PATH,
-                                         image_size=384,
-                                         vit='swin_l')
-            
+            tagging_model = ram(
+                pretrained=RAM_CHECKPOINT_PATH, image_size=384, vit="swin_l"
+            )
+
         tagging_model = tagging_model.eval().to(args.device)
-        
+
         # initialize Tag2Text
-        tagging_transform = TS.Compose([
-            TS.Resize((384, 384)),
-            TS.ToTensor(), 
-            TS.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
-        ])
-        
+        tagging_transform = TS.Compose(
+            [
+                TS.Resize((384, 384)),
+                TS.ToTensor(),
+                TS.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
         classes = None
     elif args.class_set == "none":
-        classes = ['item']
+        classes = ["item"]
     else:
         raise ValueError("Unknown args.class_set: ", args.class_set)
 
@@ -448,64 +519,91 @@ def main(args: argparse.Namespace):
         print("Skipping tagging and detection models. ")
     else:
         print(f"{args.class_set} will be used to detect classes. ")
-        
+
     save_name = f"{args.class_set}"
-    if args.sam_variant != "sam": # For backward compatibility
+    if args.sam_variant != "sam":  # For backward compatibility
         save_name += f"_{args.sam_variant}"
     if args.exp_suffix:
         save_name += f"_{args.exp_suffix}"
-    
+
     if args.save_video:
         video_save_path = args.dataset_root / args.scene_id / f"gsa_vis_{save_name}.mp4"
         frames = []
-    
+
     for idx in trange(len(dataset)):
         ### Relevant paths and load image ###
         color_path = dataset.color_paths[idx]
 
         color_path = Path(color_path)
-        
-        vis_save_path = color_path.parent.parent / f"gsa_vis_{save_name}" / color_path.name
-        detections_save_path = color_path.parent.parent / f"gsa_detections_{save_name}" / color_path.name
+
+        vis_save_path = (
+            color_path.parent.parent / f"gsa_vis_{save_name}" / color_path.name
+        )
+        detections_save_path = (
+            color_path.parent.parent / f"gsa_detections_{save_name}" / color_path.name
+        )
         detections_save_path = detections_save_path.with_suffix(".pkl.gz")
-        
+
         os.makedirs(os.path.dirname(vis_save_path), exist_ok=True)
         os.makedirs(os.path.dirname(detections_save_path), exist_ok=True)
-        
+
         # opencv can't read Path objects... sigh...
         color_path = str(color_path)
         vis_save_path = str(vis_save_path)
         detections_save_path = str(detections_save_path)
-        
-        image = cv2.imread(color_path) # This will in BGR color space
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # Convert to RGB color space
+
+        image = cv2.imread(color_path)  # This will in BGR color space
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB color space
         image_pil = Image.fromarray(image_rgb)
-        
+
         ### Tag2Text ###
         if args.class_set in ["ram", "tag2text"]:
             raw_image = image_pil.resize((384, 384))
             raw_image = tagging_transform(raw_image).unsqueeze(0).to(args.device)
-            
+
             if args.class_set == "ram":
-                res = inference_ram(raw_image , tagging_model)
-                caption="NA"
+                res = inference_ram(raw_image, tagging_model)
+                caption = "NA"
             elif args.class_set == "tag2text":
-                res = inference_tag2text.inference(raw_image , tagging_model, specified_tags)
-                caption=res[2]
+                res = inference_tag2text.inference(
+                    raw_image, tagging_model, specified_tags
+                )
+                caption = res[2]
 
             # Currently ", " is better for detecting single tags
             # while ". " is a little worse in some case
-            text_prompt=res[0].replace(' |', ',')
-            
-            # Add "other item" to capture objects not in the tag2text captions. 
+            text_prompt = res[0].replace(" |", ",")
+
+            # Add "other item" to capture objects not in the tag2text captions.
             # Remove "xxx room", otherwise it will simply include the entire image
             # Also hide "wall" and "floor" for now...
             add_classes = ["other item"]
             remove_classes = [
-                "room", "kitchen", "office", "house", "home", "building", "corner",
-                "shadow", "carpet", "photo", "shade", "stall", "space", "aquarium", 
-                "apartment", "image", "city", "blue", "skylight", "hallway", 
-                "bureau", "modern", "salon", "doorway", "wall lamp"
+                "room",
+                "kitchen",
+                "office",
+                "house",
+                "home",
+                "building",
+                "corner",
+                "shadow",
+                "carpet",
+                "photo",
+                "shade",
+                "stall",
+                "space",
+                "aquarium",
+                "apartment",
+                "image",
+                "city",
+                "blue",
+                "skylight",
+                "hallway",
+                "bureau",
+                "modern",
+                "salon",
+                "doorway",
+                "wall lamp",
             ]
             bg_classes = ["wall", "floor", "ceiling"]
 
@@ -515,23 +613,24 @@ def main(args: argparse.Namespace):
                 remove_classes += bg_classes
 
             classes = process_tag_classes(
-                text_prompt, 
-                add_classes = add_classes,
-                remove_classes = remove_classes,
+                text_prompt,
+                add_classes=add_classes,
+                remove_classes=remove_classes,
             )
-            
+
         # add classes to global classes
         global_classes.update(classes)
-        
+
         if args.accumu_classes:
             # Use all the classes that have been seen so far
             classes = list(global_classes)
-            
+
         ### Detection and segmentation ###
         if args.class_set == "none":
             # Directly use SAM in dense sampling mode to get segmentation
             mask, xyxy, conf = get_sam_segmentation_dense(
-                args.sam_variant, mask_generator, image_rgb)
+                args.sam_variant, mask_generator, image_rgb
+            )
             detections = sv.Detections(
                 xyxy=xyxy,
                 confidence=conf,
@@ -539,69 +638,115 @@ def main(args: argparse.Namespace):
                 mask=mask,
             )
             image_crops, image_feats, text_feats = compute_clip_features(
-                image_rgb, detections, clip_model, clip_preprocess, clip_tokenizer, classes, args.device)
+                image_rgb,
+                detections,
+                clip_model,
+                clip_preprocess,
+                clip_tokenizer,
+                classes,
+                args.device,
+            )
 
             ### Visualize results ###
             annotated_image, labels = vis_result_fast(
-                image, detections, classes, instance_random_color=True)
-            
+                image, detections, classes, instance_random_color=True
+            )
+
             cv2.imwrite(vis_save_path, annotated_image)
         else:
-            # Using GroundingDINO to detect and SAM to segment
-            detections = grounding_dino_model.predict_with_classes(
-                image=image, # This function expects a BGR image...
-                classes=classes,
-                box_threshold=args.box_threshold,
-                text_threshold=args.text_threshold,
-            )
-            
-            if len(detections.class_id) > 0:
-                ### Non-maximum suppression ###
-                # print(f"Before NMS: {len(detections.xyxy)} boxes")
-                nms_idx = torchvision.ops.nms(
-                    torch.from_numpy(detections.xyxy), 
-                    torch.from_numpy(detections.confidence), 
-                    args.nms_threshold
-                ).numpy().tolist()
-                # print(f"After NMS: {len(detections.xyxy)} boxes")
-
-                detections.xyxy = detections.xyxy[nms_idx]
-                detections.confidence = detections.confidence[nms_idx]
-                detections.class_id = detections.class_id[nms_idx]
-                
-                # Somehow some detections will have class_id=-1, remove them
-                valid_idx = detections.class_id != -1
-                detections.xyxy = detections.xyxy[valid_idx]
-                detections.confidence = detections.confidence[valid_idx]
-                detections.class_id = detections.class_id[valid_idx]
-                
-                ### Segment Anything ###
-                detections.mask = get_sam_segmentation_from_xyxy(
-                    sam_predictor=sam_predictor,
-                    image=image_rgb,
-                    xyxy=detections.xyxy
+            if args.detector == "dino":
+                # Using GroundingDINO to detect and SAM to segment
+                detections = grounding_dino_model.predict_with_classes(
+                    image=image,  # This function expects a BGR image...
+                    classes=classes,
+                    box_threshold=args.box_threshold,
+                    text_threshold=args.text_threshold,
                 )
 
-                # Compute and save the clip features of detections  
+                if len(detections.class_id) > 0:
+                    ### Non-maximum suppression ###
+                    # print(f"Before NMS: {len(detections.xyxy)} boxes")
+                    nms_idx = (
+                        torchvision.ops.nms(
+                            torch.from_numpy(detections.xyxy),
+                            torch.from_numpy(detections.confidence),
+                            args.nms_threshold,
+                        )
+                        .numpy()
+                        .tolist()
+                    )
+                    # print(f"After NMS: {len(detections.xyxy)} boxes")
+
+                    detections.xyxy = detections.xyxy[nms_idx]
+                    detections.confidence = detections.confidence[nms_idx]
+                    detections.class_id = detections.class_id[nms_idx]
+
+                    # Somehow some detections will have class_id=-1, remove them
+                    valid_idx = detections.class_id != -1
+                    detections.xyxy = detections.xyxy[valid_idx]
+                    detections.confidence = detections.confidence[valid_idx]
+                    detections.class_id = detections.class_id[valid_idx]
+            elif args.detector == "yolo":
+                # YOLO
+                # yolo_model.set_classes(classes)
+                yolo_model_w_classes.set_classes(classes)
+                yolo_results_w_classes = yolo_model_w_classes.predict(color_path)
+
+                yolo_results_w_classes[0].save(vis_save_path[:-4] + "_yolo_out.jpg")
+                xyxy_tensor = yolo_results_w_classes[0].boxes.xyxy
+                xyxy_np = xyxy_tensor.cpu().numpy()
+                confidences = yolo_results_w_classes[0].boxes.conf.cpu().numpy()
+
+                detections = sv.Detections(
+                    xyxy=xyxy_np,
+                    confidence=confidences,
+                    class_id=yolo_results_w_classes[0]
+                    .boxes.cls.cpu()
+                    .numpy()
+                    .astype(int),
+                    mask=None,
+                )
+
+            if len(detections.class_id) > 0:
+
+                ### Segment Anything ###
+                detections.mask = get_sam_segmentation_from_xyxy(
+                    sam_predictor=sam_predictor, image=image_rgb, xyxy=detections.xyxy
+                )
+
+                # Compute and save the clip features of detections
                 image_crops, image_feats, text_feats = compute_clip_features(
-                    image_rgb, detections, clip_model, clip_preprocess, clip_tokenizer, classes, args.device)
+                    image_rgb,
+                    detections,
+                    clip_model,
+                    clip_preprocess,
+                    clip_tokenizer,
+                    classes,
+                    args.device,
+                )
             else:
                 image_crops, image_feats, text_feats = [], [], []
-            
+
             ### Visualize results ###
             annotated_image, labels = vis_result_fast(image, detections, classes)
-            
+
             # save the annotated grounded-sam image
             if args.class_set in ["ram", "tag2text"] and args.use_slow_vis:
                 annotated_image_caption = vis_result_slow_caption(
-                    image_rgb, detections.mask, detections.xyxy, labels, caption, text_prompt)
+                    image_rgb,
+                    detections.mask,
+                    detections.xyxy,
+                    labels,
+                    caption,
+                    text_prompt,
+                )
                 Image.fromarray(annotated_image_caption).save(vis_save_path)
             else:
                 cv2.imwrite(vis_save_path, annotated_image)
-        
+
         if args.save_video:
             frames.append(annotated_image)
-        
+
         # Convert the detections to a dict. The elements are in np.array
         results = {
             "xyxy": detections.xyxy,
@@ -613,24 +758,26 @@ def main(args: argparse.Namespace):
             "image_feats": image_feats,
             "text_feats": text_feats,
         }
-        
+
         if args.class_set in ["ram", "tag2text"]:
             results["tagging_caption"] = caption
             results["tagging_text_prompt"] = text_prompt
-        
+
         # save the detections using pickle
         # Here we use gzip to compress the file, which could reduce the file size by 500x
         with gzip.open(detections_save_path, "wb") as f:
             pickle.dump(results, f)
-    
+
     # save global classes
-    with open(args.dataset_root / args.scene_id / f"gsa_classes_{save_name}.json", "w") as f:
+    with open(
+        args.dataset_root / args.scene_id / f"gsa_classes_{save_name}.json", "w"
+    ) as f:
         json.dump(list(global_classes), f)
-            
+
     if args.save_video:
         imageio.mimsave(video_save_path, frames, fps=10)
         print(f"Video saved to {video_save_path}")
-        
+
 
 if __name__ == "__main__":
     parser = get_parser()

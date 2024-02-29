@@ -32,7 +32,7 @@ The env variables needed can be found in `env_vars.bash.template`. When followin
 
 ### Install the required libraries
 
-We recommend setting up a virtual environment using virtualenv or conda. Our code has been tested with Python 3.10.12. It may also work with other later versions. 
+We recommend setting up a virtual environment using virtualenv or conda. Our code has been tested with Python 3.10.12. It may also work with other later versions. We also provide the `environment.yml` file for Conda users. In generaly, directly installing conda env using `.yml` file may cause some unexpected issues, so we recommand setting up the environment by the following instructions and only using the `.yml` file as a reference. 
 
 Sample instructions for `conda` users. 
 
@@ -41,14 +41,17 @@ conda create -n conceptgraph anaconda python=3.10
 conda activate conceptgraph
 
 # Install the required libraries
-pip install tyro open_clip_torch wandb h5py openai hydra-core
+pip install tyro open_clip_torch wandb h5py openai hydra-core distinctipy
+
+# for yolo
+pip install ultralytics
 
 # Install the Faiss library (CPU version should be fine)
 conda install -c pytorch faiss-cpu=1.7.4 mkl=2021 blas=1.0=mkl
 
 ##### Install Pytorch according to your own setup #####
 # For example, if you have a GPU with CUDA 11.8 (We tested it Pytorch 2.0.1)
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.8 -c pytorch -c nvidia
 
 # Install Pytorch3D (https://github.com/facebookresearch/pytorch3d/blob/main/INSTALL.md)
 # conda install pytorch3d -c pytorch3d # This detects a conflict. You can use the command below, maybe with a different version
@@ -67,7 +70,7 @@ pip install .
 
 ### Install [Grounded-SAM](https://github.com/IDEA-Research/Grounded-Segment-Anything) package
 
-Follow the instructions on the original [repo](https://github.com/IDEA-Research/Grounded-Segment-Anything#install-without-docker). 
+Follow the instructions on the original [repo](https://github.com/IDEA-Research/Grounded-Segment-Anything#install-without-docker). ConceptGraphs has been tested with the codebase at this [commit](https://github.com/IDEA-Research/Grounded-Segment-Anything/commit/a4d76a2b55e348943cba4cd57d7553c354296223). Grounded-SAM codebase at later commits may require some adaptations. 
 
 First checkout the package by 
 
@@ -116,7 +119,7 @@ pip install -e .
 
 ### Set up LLaVA (used for scene graph generation)
 
-Follow the instructions on the [LLaVA repo](https://github.com/haotian-liu/LLaVA) to set it up. You also need to prepare the LLaVA checkpoints and save them to `$LLAVA_MODEL_PATH`. We have tested with `LLaVA-7B-v0` but later versions should also work. 
+Follow the instructions on the [LLaVA repo](https://github.com/haotian-liu/LLaVA) to set it up. You also need to prepare the LLaVA checkpoints and save them to `$LLAVA_MODEL_PATH`. We have tested with model checkpoint `LLaVA-7B-v0` and [LLaVA code](https://github.com/haotian-liu/LLaVA) at this [commit](https://github.com/haotian-liu/LLaVA/commit/8fc54a09a6be74b2abd913c468fb3d42ae826194). LLaVA codebase at later commits may require some adaptations.
 
 ```bash
 # Set the env variables as follows (change the paths accordingly)
@@ -272,6 +275,28 @@ Then in the open3d visualizer window, you can use the following key callbacks to
 * Press `f` and type text in the terminal, and the point cloud will be colored by the CLIP similarity with the input text. 
 * Press `i` to color the point clouds by object instance ID. 
 
+### Evaluate semantic segmentation from the object-based mapping results on Replica datasets
+
+First, download the GT point cloud with per-point semantic segmentation labels from this [Google Drive link](https://drive.google.com/file/d/1NhQIM5PCH5L5vkZDSRq6YF1bRaSX2aem/view?usp=sharing). Please refer to [this issue](https://github.com/concept-graphs/concept-graphs/issues/18#issuecomment-1876673985) for a brief description of how they are generated. Unzip the file and record its location in `REPLICA_SEMANTIC_ROOT`. 
+
+Then run the following command to evaluate the semantic segmentation results. The results will be saved in the `results` folder, where the mean recall `mrecall` is the mAcc and `fmiou` is the F-mIoU reported in the paper. 
+
+```bash
+# CoceptGraphs (without open-vocab detector)
+python scripts/eval_replica_semseg.py \
+    --replica_root $REPLICA_ROOT \
+    --replica_semantic_root $REPLICA_SEMANTIC_ROOT \
+    --n_exclude 6 \
+    --pred_exp_name none_overlap_maskconf0.95_simsum1.2_dbscan.1_merge20_masksub
+
+# On the ConceptGraphs-Detect (Grounding-DINO as the object detector)
+python scripts/eval_replica_semseg.py \
+    --replica_root $REPLICA_ROOT \
+    --replica_semantic_root $REPLICA_SEMANTIC_ROOT \
+    --n_exclude 6 \
+    --pred_exp_name ram_withbg_allclasses_overlap_maskconf0.25_simsum1.2_dbscan.1_masksub
+```
+
 
 
 ### Extract object captions and build scene graphs
@@ -323,4 +348,73 @@ Then the object map with scene graph can be visualized using the following comma
 python scripts/visualize_cfslam_results.py \
     --result_path ${REPLICA_ROOT}/${SCENE_NAME}/sg_cache/map/scene_map_cfslam_pruned.pkl.gz \
     --edge_file ${REPLICA_ROOT}/${SCENE_NAME}/sg_cache/cfslam_object_relations.json
+```
+
+
+## AI2Thor-related experiments
+
+During the development stage, we performed some experiments on the AI2Thor dataset. 
+Upon request, now we provide the code and instructions for these experiments. 
+However, note that we didn't perform any quantitative evaluation on AI2Thor. 
+And because of domain gap, performance of ConceptGraphs may be worse than other datasets reported. 
+
+### Setup 
+
+Use our own [fork](https://github.com/georgegu1997/ai2thor), where some changes were made to record the interaction trajectories. 
+
+```bash
+cd .. # go back to the root folder CFSLAM
+git clone git@github.com:georgegu1997/ai2thor.git
+cd ai2thor
+git checkout main5.0.0
+pip install -e .
+
+# This is for the ProcThor dataset.
+pip install ai2thor-colab prior --upgrade
+```
+
+If you meet error saying `Could not load the Qt platform plugin "xcb"` later on, it probably means that is some weird issue with `opencv-python` and `opencv-python-headless`. Try uninstalling them and install one of them back. 
+
+### Generating AI2Thor datasets
+
+1. Use `$AI2THOR_DATASET_ROOT` as the directory ai2thor dataset and save it to a variable. Also set the scene used from AI2Thor. 
+
+```bash
+# Change this to run it in a different scene in AI2Thor environment
+# train_3 is a scene from the ProcThor dataset, which containing multiple rooms in one house
+SCENE_NAME=train_3
+
+# The following scripts need to be run in the conceptgraph folder
+cd ./conceptgraph
+```
+
+2. Generate a densely captured grid map for the selected scene. 
+```bash
+# Uniform sample camera locations (XY + Yaw)
+python scripts/generate_ai2thor_dataset.py --dataset_root $AI2THOR_DATASET_ROOT --scene_name $SCENE_NAME --sample_method uniform --n_sample -1 --grid_size 0.5
+# Uniform sample + randomize lighting
+python scripts/generate_ai2thor_dataset.py --dataset_root $AI2THOR_DATASET_ROOT --scene_name $SCENE_NAME --sample_method uniform --n_sample -1 --grid_size 0.5 --save_suffix randlight --randomize_lighting
+```
+
+3. Generate a human-controlled trajectory for the selected scene. (GUI and keyboard interaction needed)
+```bash
+# Interact generation and save trajectory files. 
+# This line will open up a Unity window. You can control the agent with arrow keys in the terminal window. 
+python scripts/generate_ai2thor_dataset.py --dataset_root $AI2THOR_DATASET_ROOT --scene_name $SCENE_NAME --interact
+
+# Generate observations from the saved trajectory file
+python scripts/generate_ai2thor_dataset.py --dataset_root $AI2THOR_DATASET_ROOT --scene_name $SCENE_NAME --sample_method from_file
+```
+
+4. Generate a trajectory with object randomly moved. 
+```bash
+MOVE_RATIO=0.25
+RAND_SUFFIX=mv${MOVE_RATIO}
+python scripts/generate_ai2thor_dataset.py \
+    --dataset_root $AI2THOR_DATASET_ROOT \
+    --scene_name $SCENE_NAME \
+    --interact \
+    --save_suffix $RAND_SUFFIX \
+    --randomize_move_moveable_ratio $MOVE_RATIO \
+    --randomize_move_pickupable_ratio $MOVE_RATIO
 ```
