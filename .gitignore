@@ -1,1 +1,12 @@
 concept-graphs/assets/*
+
+data/
+habitat-sim/
+habitat-lab/
+generated/
+
+*.zip
+*.tar
+*.tar.gz
+
+__pycache__/
