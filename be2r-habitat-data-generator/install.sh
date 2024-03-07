@@ -1,0 +1,14 @@
+# curl https://storage.googleapis.com/gibson_scenes/ig_dataset.tar.gz --output ig_dataset.tar.gz
+# python -m habitat_sim.utils.datasets_download --username <api-token-id> --password <api-token-secret> --uids hm3d_minival_v0.2
+
+curl "https://mp-app-prod.s3.amazonaws.com/habitat/v1.0/hm3d-minival-glb-v0.2.tar?response-content-disposition=attachment%3B%20filename%2A%3DUTF-8%27%27hm3d-minival-glb-v0.2.tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20240307T175531Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=AKIA2OYCIXZCZI5MDYM6%2F20240307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=87c4fd166a58d00edbda329f208f546bff029c5bef3db64edfaf32fb6550f191" --output 'hm3d-minival-glb-v0.2.tar'
+curl "https://mp-app-prod.s3.amazonaws.com/habitat/v1.0/hm3d-minival-habitat-v0.2.tar?response-content-disposition=attachment%3B%20filename%2A%3DUTF-8%27%27hm3d-minival-habitat-v0.2.tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20240307T180355Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=AKIA2OYCIXZCZI5MDYM6%2F20240307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=36b6f5a39d25b76679512a4f9c4721abf44d810c5babd4db059e44b587615c1d" --output 'hm3d-minival-habitat-v0.2.tar'
+curl "https://mp-app-prod.s3.amazonaws.com/habitat/v1.0/hm3d-minival-semantic-annots-v0.2.tar?response-content-disposition=attachment%3B%20filename%2A%3DUTF-8%27%27hm3d-minival-semantic-annots-v0.2.tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20240307T180357Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=AKIA2OYCIXZCZI5MDYM6%2F20240307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=fc1b22a5ee4f26c279423b2402a88dab5398ed28409fd8db0e97cc777dcdcdea" --output 'hm3d-minival-semantic-annots-v0.2.tar'
+curl "https://mp-app-prod.s3.amazonaws.com/habitat/v1.0/hm3d-minival-semantic-configs-v0.2.tar?response-content-disposition=attachment%3B%20filename%2A%3DUTF-8%27%27hm3d-minival-semantic-configs-v0.2.tar&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20240307T180400Z&X-Amz-SignedHeaders=host&X-Amz-Expires=3600&X-Amz-Credential=AKIA2OYCIXZCZI5MDYM6%2F20240307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=c9297f364fe5e9af2a967c8c207750cc6e6fa2552f5321be09fe57b5cd9475bf" --output 'hm3d-minival-semantic-configs-v0.2.tar'
+
+mkdir -p 'data/scene_datasets/hm3d_v0.2/minival/'
+
+tar -xvf 'hm3d-minival-glb-v0.2.tar' -C "data/scene_datasets/hm3d_v0.2/minival/"
+tar -xvf 'hm3d-minival-habitat-v0.2.tar' -C "data/scene_datasets/hm3d_v0.2/minival/"
+tar -xvf 'hm3d-minival-semantic-annots-v0.2.tar' -C "data/scene_datasets/hm3d_v0.2/minival/"
+tar -xvf 'hm3d-minival-semantic-configs-v0.2.tar' -C "data/scene_datasets/hm3d_v0.2/minival/" 

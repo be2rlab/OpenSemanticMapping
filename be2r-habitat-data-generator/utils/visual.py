@@ -1,0 +1,63 @@
+import numpy as np
+from matplotlib import pyplot as plt
+
+from PIL import Image
+
+from habitat_sim.utils.common import d3_40_colors_rgb
+
+
+def display_sample(rgb_obs, semantic_obs=np.array([]), depth_obs=np.array([])):
+    rgb_img = Image.fromarray(rgb_obs, mode="RGBA")
+
+    arr = [rgb_img]
+    titles = ["rgb"]
+    if semantic_obs.size != 0:
+        semantic_img = Image.new("P", (semantic_obs.shape[1], semantic_obs.shape[0]))
+        semantic_img.putpalette(d3_40_colors_rgb.flatten())
+        semantic_img.putdata((semantic_obs.flatten() % 40).astype(np.uint8))
+        semantic_img = semantic_img.convert("RGBA")
+        arr.append(semantic_img)
+        titles.append("semantic")
+
+    if depth_obs.size != 0:
+        depth_img = Image.fromarray((depth_obs / 10 * 255).astype(np.uint8), mode="L")
+        arr.append(depth_img)
+        titles.append("depth")
+
+    plt.figure(figsize=(12, 8))
+    for i, data in enumerate(arr):
+        ax = plt.subplot(1, 3, i + 1)
+        ax.axis("off")
+        ax.set_title(titles[i])
+        plt.imshow(data)
+    plt.show(block=False)
+
+
+def convert_points_to_topdown(pathfinder, points, meters_per_pixel):
+    points_topdown = []
+    bounds = pathfinder.get_bounds()
+    for point in points:
+        # convert 3D x,z to topdown x,y
+        px = (point[0] - bounds[0][0]) / meters_per_pixel
+        py = (point[2] - bounds[0][2]) / meters_per_pixel
+        points_topdown.append(np.array([px, py]))
+    return points_topdown
+
+
+# display a topdown map with matplotlib
+def display_map(topdown_map, agent_position=None, key_points=None):
+    plt.figure(figsize=(12, 8))
+    ax = plt.subplot(1, 1, 1)
+    ax.axis("off")
+    plt.imshow(topdown_map)
+    # plot points on map
+
+    if agent_position is not None:
+        plt.plot(agent_position[0], agent_position[1], marker="x", markersize=10, alpha=0.8, label='Start point')
+
+    if key_points is not None:
+        for i, point in enumerate(key_points):
+            plt.plot(point[0], point[1], marker="o", markersize=10, alpha=0.8, label=f'Goal {i+1}')
+
+    plt.legend()
+    plt.show(block=False)
