@@ -279,6 +279,8 @@ def make_cfg(settings: Dict[str, Any]):
         sim_cfg.navmesh_settings.set_defaults()
         sim_cfg.navmesh_settings.agent_radius = agent_cfg.radius
         sim_cfg.navmesh_settings.agent_height = agent_cfg.height
+        sim_cfg.navmesh_settings.cell_size = settings["move_actuation_amount"] / 2
+        sim_cfg.navmesh_settings.edge_max_len = agent_cfg.radius * 8 # "A good value for edgeMaxLen is something like agenRadius*8"
         sim_cfg.navmesh_settings.include_static_objects = settings[
             "navmesh_include_static_objects"
         ]
@@ -286,12 +288,19 @@ def make_cfg(settings: Dict[str, Any]):
     return habitat_sim.Configuration(sim_cfg, [agent_cfg])
 
 
-def load_sim_settings(json_path, data_path, dataset='gibson', scene_name=None):
+def load_sim_settings(json_path, data_path, dataset=None, scene_name=None):
     with open(json_path, "r") as read_file:
         settings = json.load(read_file)
 
     if scene_name is None:
         scene_name = settings['scene_name']
+    else:
+        settings['scene_name'] = scene_name
+
+    if dataset is None:
+        dataset = settings['dataset_name']
+    else:
+        settings['dataset_name'] = dataset
 
     if dataset == 'gibson':
         scene_path = f"scene_datasets/gibson/{scene_name}.glb"
@@ -305,7 +314,8 @@ def load_sim_settings(json_path, data_path, dataset='gibson', scene_name=None):
     elif dataset in ['hm3d_minival', 'hm3d_v0.2_minival']:
         # scene_path = f"scene_datasets/hm3d_v0.2/minival/{scene_name}/{scene_name.split('-')[-1]}.semantic.glb"
         scene_path = f"scene_datasets/hm3d_v0.2/minival/{scene_name}/{scene_name.split('-')[-1]}.basis.glb"
-        config_path = f"scene_datasets/hm3d_v0.2/minival/hm3d_annotated_minival_basis.scene_dataset_config.json"
+        # config_path = f"scene_datasets/hm3d_v0.2/hm3d_annotated_minival_basis.scene_dataset_config.json"
+        config_path = None
     elif dataset == 'mp3d_example':
         scene_path = f"scene_datasets/mp3d_example/{scene_name}/{scene_name}.glb"
         config_path = None
@@ -323,7 +333,7 @@ def load_sim_settings(json_path, data_path, dataset='gibson', scene_name=None):
             config_path
         )
 
-    return settings, scene_name
+    return settings
 
 
 def load_light_settings(json_path):
