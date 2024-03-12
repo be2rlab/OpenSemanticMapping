@@ -49,15 +49,15 @@ def display_map(topdown_map, agent_position=None, key_points=None):
     plt.figure(figsize=(12, 8))
     ax = plt.subplot(1, 1, 1)
     ax.axis("off")
-    plt.imshow(topdown_map)
+    ax.imshow(topdown_map)
     # plot points on map
 
     if agent_position is not None:
-        plt.plot(agent_position[0], agent_position[1], marker="x", markersize=10, alpha=0.8, label='Start point')
+        ax.plot(agent_position[0], agent_position[1], marker='*', color='red', markersize=10, alpha=0.8, ls='', label='Start point')
 
     if key_points is not None:
         for i, point in enumerate(key_points):
-            plt.plot(point[0], point[1], marker="o", markersize=10, alpha=0.8, label=f'Goal {i+1}')
+            ax.plot(point[0], point[1], marker="o", markersize=10, alpha=0.8, ls='', label=f'Goal {i+1}')
 
-    plt.legend()
-    plt.show(block=False)
+    ax.legend()
+    plt.show()
