@@ -3,8 +3,6 @@ import random
 import quaternion
 import numpy as np
 
-from PIL import Image
-
 import habitat_sim
 
 from utils.settings import make_cfg
@@ -19,6 +17,7 @@ def create_simulator(sim_settings):
     sim.seed(sim_settings["seed"])
 
     return sim
+
 
 def get_state_translation_matrix(sensor_state):
     quat = sensor_state.rotation
@@ -35,33 +34,25 @@ def get_state_translation_matrix(sensor_state):
 
 
 def get_camera_matrix(agent):
-    w = agent.agent_config.sensor_specifications[0].resolution[0]
-    h = agent.agent_config.sensor_specifications[0].resolution[1]
+    sensor_spec = agent.agent_config.sensor_specifications[0]
 
-    hfov = float(agent._sensors['color_sensor'].hfov) * np.pi / 180.
-    fov = float(agent._sensors['color_sensor'].fov) * np.pi / 180.
+    w = sensor_spec.resolution[1]
+    h = sensor_spec.resolution[0]
+
+    hfov = float(sensor_spec.hfov) * np.pi / 180.
+
+    # hfov = float(agent._sensors['color_sensor'].hfov) * np.pi / 180.
+    # fov = float(agent._sensors['color_sensor'].fov) * np.pi / 180.
+
+    f = (1 / np.tan(hfov / 2.)) * w / 2
 
     K = np.array([
-        [(1 / np.tan(hfov / 2.)) * h / 2 , 0., (h-1) / 2],
-        [0., (1 / np.tan(fov / 2.)) * w / 2, (w-1) / 2],
+        [f, 0., (h-1) / 2],
+        [0., f, (w-1) / 2],
         [0., 0., 1]
     ])
 
     return K
-
-
-def save_observed_images(index, observations, depth_scale, image_output_path):
-    if "color_sensor" in observations:
-        rgb_image = Image.fromarray(observations["color_sensor"]).convert('RGB')
-
-    if "depth_sensor" in observations:
-        depth_image = Image.fromarray(observations["depth_sensor"].astype(float) * depth_scale).convert('I')
-
-    if 'semantic_image' in observations:
-        semantic_image = Image.fromarray(observations["semantic_sensor"])
-
-    rgb_image.save(os.path.join(image_output_path, 'frame' + str(index).zfill(6) + '.jpg'))
-    depth_image.save(os.path.join(image_output_path, 'depth' + str(index).zfill(6) + '.png'))
 
 
 def do_test_steps(sim, sim_settings, max_frames=5):
@@ -80,3 +71,15 @@ def do_test_steps(sim, sim_settings, max_frames=5):
         depth = observations["depth_sensor"]
 
         display_sample(rgb, semantic, depth)
+
+
+def place_agent(sim, sim_settings, start_point, start_rotation=None):
+    agent_state = habitat_sim.AgentState()
+    agent_state.position = start_point
+
+    if start_rotation is not None:
+        agent_state.rotation = start_rotation
+
+    sim.initialize_agent(sim_settings["default_agent"], agent_state)
+
+    return sim
