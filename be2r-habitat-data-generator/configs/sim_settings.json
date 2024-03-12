@@ -1,15 +1,19 @@
 {
-    "scene_name": "17DRP5sb8fy",
-    "width": 1080,
-    "height": 960,
+    "dataset_name": "gibson",
+    "scene_name": "Adrian",
+
+    "width": 1200,
+    "height": 680,
     "hfov": 90,
     "zfar": 1000.0,
     "clear_color": [0.0, 0.0, 0.0, 1.0],
     "sensor_height": 1.5,
 
+    "depth_scale": 6553.5,
+    "nav_points_number": 10,
     
-    "move_actuation_amount": 0.05,
-    "turn_actuation_amount": 1,
+    "move_actuation_amount": 0.01,
+    "turn_actuation_amount": 1.0,
 
     "default_agent": 0,
     "agent_radius": 0.2,
@@ -30,10 +34,10 @@
     "equirect_depth_sensor": false,
     "equirect_semantic_sensor": false,
 
-    "seed": 3,
+    "seed": 30,
 
     "enable_physics": false,
-    "default_agent_navmesh": false,
-    "navmesh_include_static_objects": false,
+    "default_agent_navmesh": true,
+    "navmesh_include_static_objects": true,
     "enable_hbao": true
 }
