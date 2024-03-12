@@ -19,7 +19,7 @@ def create_simulator(sim_settings):
     return sim
 
 
-def get_state_translation_matrix(sensor_state):
+def get_state_transform_matrix(sensor_state):
     quat = sensor_state.rotation
     trans = sensor_state.position
 

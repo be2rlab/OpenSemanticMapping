@@ -7,7 +7,7 @@ from habitat.utils.visualizations import maps
 
 from src.lights import change_lights
 from utils.visual import convert_points_to_topdown, display_map, display_sample
-from utils.common import get_state_translation_matrix
+from utils.common import get_state_transform_matrix
 
 
 def get_navigable_point(sim, sim_settings):
@@ -118,6 +118,6 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
 
                 logger.save_step(
                     observations,
-                    get_state_translation_matrix(agent.state.sensor_states['color_sensor']).flatten()
+                    get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
                 )
                 pbar.update()
