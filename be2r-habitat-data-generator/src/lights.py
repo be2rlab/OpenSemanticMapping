@@ -32,7 +32,7 @@ light_models_mapping = {
 }
 
 
-def set_light_setup(sim, settings, life_index, display=True):
+def set_light_setup(sim, settings, life_index):
     setup = []
     setup_name = f'lights_setup_{life_index}'
 
@@ -40,21 +40,20 @@ def set_light_setup(sim, settings, life_index, display=True):
         interval = setup_params['life_interval']
 
         if (interval[0] is None or interval[0] <= life_index) and (interval[1] is None or life_index < interval[1]):
-            print(setup_params['info'])
             info = setup_params['info'].copy()
             info['model'] = light_models_mapping[info['model']]
-            setup.append(LightInfo(**info))
+            setup.append(info)
 
-    if display:
-        print(setup)
+    sim.set_light_setup(
+        [LightInfo(**info) for info in setup], 
+        setup_name
+    )
 
-    sim.set_light_setup(setup, setup_name)
-
-    return sim, setup_name
+    return sim, setup_name, setup
 
 
 def change_lights(sim, sim_settings, light_settings, life_index):
-    sim, setup_name = set_light_setup(sim, light_settings, life_index)
+    sim, setup_name, setup = set_light_setup(sim, light_settings, life_index)
 
     sim_settings = sim_settings.copy()
     sim_settings['scene_light_setup'] = setup_name
@@ -69,4 +68,4 @@ def change_lights(sim, sim_settings, light_settings, life_index):
     for i, state in enumerate(agent_states):
         sim.initialize_agent(i, state)
 
-    return sim
+    return sim, setup
