@@ -1,6 +1,10 @@
 import numpy as np
 
-from tqdm import tqdm
+try:
+    __IPYTHON__
+    from tqdm.notebook import tqdm, trange
+except NameError:
+    from tqdm import tqdm, trange
 
 import habitat_sim
 from habitat.utils.visualizations import maps
@@ -10,14 +14,33 @@ from utils.visual import convert_points_to_topdown, display_map, display_sample
 from utils.common import get_state_transform_matrix
 
 
-def get_navigable_point(sim, sim_settings):
+def check_path_finding(follower, point):
+    try:
+        follower.find_path(point)
+    except Exception:
+        return False
+    
+    return True
+
+
+def get_navigable_point(sim, sim_settings, prev_point=None):
     finder = sim.pathfinder
     radius = sim_settings['agent_radius']
 
-    point = finder.get_random_navigable_point(max_tries=1000)
+    if prev_point is None:
+        get_point = lambda: finder.get_random_navigable_point(max_tries=1000)
+    else:
+        get_point = lambda: finder.get_random_navigable_point_near(
+            circle_center=prev_point,
+            radius = 1_000 * sim_settings['move_actuation_amount'],
+            max_tries=1000,
+        )
 
-    while np.isnan(point).sum() > 0 or finder.distance_to_closest_obstacle(point, radius * 2) < radius:
-        point = finder.get_random_navigable_point(max_tries=1000)
+    point = get_point()
+
+    while np.isnan(point).sum() > 0 or  \
+            finder.distance_to_closest_obstacle(point, radius * 2) < radius:
+        point = get_point()
 
     return point
 
@@ -28,21 +51,30 @@ def generate_scenario(sim, sim_settings, display=True):
     else:
         nav_points_number= sim_settings['nav_points_number']
 
-        print("NavMesh area = " + str(sim.pathfinder.navigable_area))
-        print("Bounds = ", *sim.pathfinder.get_bounds())
-
         pathfinder_seed = sim_settings['seed']
         sim.pathfinder.seed(pathfinder_seed)
-        navigatable_points = [get_navigable_point(sim, sim_settings) for _ in range(nav_points_number)]
-        print("Random navigable points : ", *navigatable_points)
-        print("Are points navigable? " + str(all([sim.pathfinder.is_navigable(nav_points, sim_settings['agent_radius']) for nav_points in navigatable_points])))
 
         start_point = get_navigable_point(sim, sim_settings)
-        
-        print("Start point : " + str(start_point))
-        vis_points = [start_point] + navigatable_points
+
+        vis_points = [start_point]
+
+        for _ in trange(nav_points_number):
+            vis_points.append(get_navigable_point(sim, sim_settings, vis_points[-1]))
+
+        navigatable_points = vis_points[1:]
 
         if display:
+            print("NavMesh area = " + str(sim.pathfinder.navigable_area))
+            print("Bounds = ", *sim.pathfinder.get_bounds())
+            print("Start point : " + str(start_point))
+            print("Random navigable points : ", *navigatable_points)
+            print(
+                "Are points navigable? " + 
+                str(all([
+                    sim.pathfinder.is_navigable(nav_points, sim_settings['move_actuation_amount']) for nav_points in navigatable_points
+                ]))
+            )
+
             meters_per_pixel = 0.1
 
             xy_vis_points = convert_points_to_topdown(
@@ -72,15 +104,12 @@ def generate_scenario(sim, sim_settings, display=True):
     return start_point, navigatable_points
 
 
-def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, display=True, display_freq=50):
-    for nav_index, nav_point in enumerate(tqdm(navigatable_points)):
+def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, display=True, display_freq=50, bar_inds=[0, 1]):
+    for nav_index, nav_point in enumerate(tqdm(navigatable_points, desc=f'{logger} proccessing', position=bar_inds[0])):
         sim, light_setup = change_lights(sim, sim_settings, light_settings, nav_index)
 
         msg = f'Light setup: {light_setup}'
-        logger.add_entry(msg)
-
-        if display:
-            print(msg)
+        logger.add_entry(msg, print=display)
 
         agent = sim.agents[sim_settings["default_agent"]]
         follower = sim.make_greedy_follower(sim_settings["default_agent"])
@@ -89,18 +118,18 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
             path = follower.find_path(nav_point)
         except Exception as e:
             msg = f'Path exception: {e}. Skip goal.'
-            print('-' * 20, msg, '-' * 20, sep='\n')
-            logger.add_entry(msg)
+
+            logger.add_entry(msg, print=display)
             continue
 
-        with tqdm(total=len(path)) as pbar:
+        with tqdm(total=len(path), desc=f'Navigation #{nav_index}', position=bar_inds[1]) as pbar:
             while True:
                 try:
                     action = follower.next_action_along(nav_point)
                 except Exception as e:
                     msg = f'Path exception: {e}. Skip goal.'
-                    print('-' * 20, msg, '-' * 20, sep='\n')
-                    logger.add_entry(msg)
+
+                    logger.add_entry(msg, print=display)
                     break
 
                 if action in ['error', 'stop', None]:
@@ -114,7 +143,11 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
 
                 if display:
                     if logger.get_step_index() % display_freq == 0:
-                        display_sample(observations['color_sensor'], observations['semantic_sensor'], observations['depth_sensor'])
+                        rgb = observations["color_sensor"]
+                        semantic = observations.get("semantic_sensor", None)
+                        depth = observations.get("depth_sensor", None)
+
+                        display_sample(rgb, semantic_obs=semantic, depth_obs=depth)
 
                 logger.save_step(
                     observations,

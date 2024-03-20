@@ -9,9 +9,9 @@ from PIL import Image
 from utils.settings import load_sim_settings, load_light_settings
 
 
-def get_output_paths(dir_path, dataset_name, scene_name):
+def get_output_paths(dir_path, dataset_name, scene_name, label):
     output_path = os.path.join(
-        dir_path, "generated/", dataset_name, scene_name
+        dir_path, "generated/", dataset_name, scene_name, label
     )
 
     if not os.path.exists(output_path):
@@ -24,26 +24,46 @@ def get_output_paths(dir_path, dataset_name, scene_name):
     if not os.path.exists(image_output_path):
         os.makedirs(image_output_path)
 
-    return output_path, image_output_path
+    sim_settings_output_path = os.path.join(output_path, 'configs/sim_settings/')
+    if not os.path.exists(sim_settings_output_path):
+        os.makedirs(sim_settings_output_path)
+
+    lights_output_path = os.path.join(output_path, 'configs/lighting/')
+    if not os.path.exists(lights_output_path):
+        os.makedirs(lights_output_path)
+
+
+    return output_path, image_output_path, sim_settings_output_path, lights_output_path
 
 
 class ExperimentLogger:
-    def __init__(self, sim_settings_path, light_settings_path, package_dir_path='./') -> None:
+    def __init__(self, sim_settings_filename, package_dir_path='./') -> None:
+        self.__sim_settings_filename = sim_settings_filename
+
+        configs_path = os.path.join(package_dir_path, 'configs/')
+        sim_settings_path = os.path.join(configs_path, 'sim_settings/', sim_settings_filename)
+
         self.sim_settings = load_sim_settings(sim_settings_path, os.path.join(package_dir_path, '../data/'))
+
+        light_settings_path = os.path.join(configs_path, 'lighting/', self.sim_settings['light_settings_filename'])
         self.light_settings = load_light_settings(light_settings_path)
 
-        self.output_dir_path, self.image_output_path = get_output_paths(
+        self.output_dir_path, self.image_output_path, sim_settings_output_path, lights_output_path = get_output_paths(
             package_dir_path, 
             self.sim_settings['dataset_name'], 
-            self.sim_settings['scene_name']
+            self.sim_settings['scene_name'],
+            self.sim_settings['label']
         )
 
-        shutil.copy(sim_settings_path, os.path.join(self.output_dir_path, 'sim_settings.json'))
-        shutil.copy(light_settings_path, os.path.join(self.output_dir_path, 'light_settings.json'))
+        shutil.copy(sim_settings_path, sim_settings_output_path)
+        shutil.copy(light_settings_path, lights_output_path)
 
         self.depth_scale = self.sim_settings['depth_scale']
 
         self.__step_index = 0
+
+    def __str__(self) -> str:
+        return self.__sim_settings_filename
 
     def save_step(self, observations, transformation_matrix):
         if "color_sensor" in observations:
@@ -63,9 +83,15 @@ class ExperimentLogger:
                 f'depth{self.get_str_index()}.png'
             ))
 
-        if 'semantic_image' in observations:
-            semantic_image = Image.fromarray(observations["semantic_sensor"])
-            # depth_image.save(os.path.join(self.image_output_path, f'semantic{self.get_str_index()}.png'))
+        if 'semantic_sensor' in observations:
+            semantic_image = Image.fromarray(
+                observations["semantic_sensor"]
+            ).convert('I')
+
+            semantic_image.save(os.path.join(
+                self.image_output_path, 
+                f'semantic{self.get_str_index()}.png'
+            ))
 
         with open(os.path.join(self.output_dir_path, "traj.txt"), "a") as traj_file:
             np.savetxt(traj_file, transformation_matrix, newline=" ")
@@ -73,7 +99,10 @@ class ExperimentLogger:
 
         self.__step_index += 1
 
-    def add_entry(self, message):
+    def add_entry(self, message, print=False):
+        if print:
+            print(message)
+
         with open(os.path.join(self.output_dir_path, "log.txt"), "a") as log_file:
             log_file.write(f'[{self.get_str_index()}] {message}\n')
 
@@ -85,3 +114,6 @@ class ExperimentLogger:
 
     def get_settings(self):
         return self.sim_settings, self.light_settings
+    
+    def get_settings_name(self):
+        return self.__sim_settings_filename
