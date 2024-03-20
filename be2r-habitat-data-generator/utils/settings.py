@@ -302,30 +302,33 @@ def load_sim_settings(json_path, data_path, dataset=None, scene_name=None):
     else:
         settings['dataset_name'] = dataset
 
+    scene = None
+
     if dataset == 'gibson':
-        scene_path = f"scene_datasets/gibson/{scene_name}.glb"
-        config_path = f"datasets/pointnav/gibson/v1/train/content/{scene_name}.json"
+        scene = os.path.join(
+            data_path, f"scene_datasets/gibson/{scene_name}.glb"
+        )
+        config_path = f"pointnav/gibson/v1/train/content/{scene_name}.json"
     elif dataset == 'replica_cad':
-        scene_path = f"datasets/replica_cad/stages/{scene_name}.glb"
-        config_path = f"datasets/replica_cad/replicaCAD.scene_dataset_config.json"
-    elif dataset == 'test_scenes':
-        scene_path = f"scene_datasets/habitat-test-scenes/{scene_name}.glb"
-        config_path = None
+        scene = scene_name
+
+        config_path = f"ReplicaCAD_dataset/replicaCAD.scene_dataset_config.json"
+
     elif dataset in ['hm3d_minival', 'hm3d_v0.2_minival']:
-        # scene_path = f"scene_datasets/hm3d_v0.2/minival/{scene_name}/{scene_name.split('-')[-1]}.semantic.glb"
-        scene_path = f"scene_datasets/hm3d_v0.2/minival/{scene_name}/{scene_name.split('-')[-1]}.basis.glb"
-        # config_path = f"scene_datasets/hm3d_v0.2/hm3d_annotated_minival_basis.scene_dataset_config.json"
-        config_path = None
-    elif dataset == 'mp3d_example':
-        scene_path = f"scene_datasets/mp3d_example/{scene_name}/{scene_name}.glb"
-        config_path = None
+        scene = os.path.join(
+            data_path, f"hm3d_v0.2/minival/{scene_name}/{scene_name.split('-')[-1]}.basis.glb"
+        )
+        config_path = f"hm3d_v0.2/hm3d_annotated_minival_basis.scene_dataset_config.json"
+    # elif dataset == 'mp3d_example':
+    #     scene_path = f"scene_datasets/mp3d_example/{scene_name}/{scene_name}.glb"
+    #     config_path = None
+    # elif dataset == 'test_scenes':
+    #     scene_path = f"scene_datasets/habitat-test-scenes/{scene_name}.glb"
+    #     config_path = None
     else:
         raise ValueError(f'No such dataset: {dataset}')
     
-    settings['scene'] = os.path.join(
-        data_path, 
-        scene_path
-    )
+    settings['scene'] = scene
 
     if config_path is not None:
         settings['scene_dataset_config_file'] = os.path.join(
