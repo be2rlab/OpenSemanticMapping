@@ -1,0 +1,11 @@
+{
+    "lights": {
+        "0": {
+            "position": [0.0, 0.0, 0.0, 1.0],
+            "intensity": 10.0,
+            "color": [1.0, 1.0, 1.0],
+            "type": "camera",
+            "life_intervals": [[null, null]]
+        }
+    }
+}

@@ -1,0 +1,46 @@
+{
+    "dataset_name": "replica_cad",
+    "scene_name": "v3_sc0_staging_02",
+    "label": "default_lights_0",
+
+    "light_settings_filename": "light_settings_replica_cad_0.json",
+
+    "width": 1200,
+    "height": 680,
+    "hfov": 90,
+    "zfar": 1000.0,
+    "clear_color": [0.0, 0.0, 0.0, 1.0],
+    "sensor_height": 1.5,
+
+    "depth_scale": 6553.5,
+    "nav_points_number": 10,
+    
+    "move_actuation_amount": 0.01,
+    "turn_actuation_amount": 1.0,
+
+    "default_agent": 0,
+    "agent_radius": 0.2,
+
+    "override_scene_light_defaults": true,
+    "scene_light_setup": "default",
+
+    "color_sensor": true,
+    "semantic_sensor": true,
+    "depth_sensor": true,
+    "ortho_rgba_sensor": false,
+    "ortho_depth_sensor": false,
+    "ortho_semantic_sensor": false,
+    "fisheye_rgba_sensor": false,
+    "fisheye_depth_sensor": false,
+    "fisheye_semantic_sensor": false,
+    "equirect_rgba_sensor": false,
+    "equirect_depth_sensor": false,
+    "equirect_semantic_sensor": false,
+
+    "seed": 2,
+
+    "enable_physics": true,
+    "default_agent_navmesh": true,
+    "navmesh_include_static_objects": false,
+    "enable_hbao": true
+}

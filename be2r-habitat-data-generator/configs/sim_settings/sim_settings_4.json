@@ -1,6 +1,9 @@
 {
-    "dataset_name": "gibson",
-    "scene_name": "Adrian",
+    "dataset_name": "replica_cad",
+    "scene_name": "v3_sc0_staging_00",
+    "label": "camera_lights",
+
+    "light_settings_filename": "light_settings_camera.json",
 
     "width": 1200,
     "height": 680,
@@ -34,10 +37,10 @@
     "equirect_depth_sensor": false,
     "equirect_semantic_sensor": false,
 
-    "seed": 30,
+    "seed": 2,
 
-    "enable_physics": false,
+    "enable_physics": true,
     "default_agent_navmesh": true,
-    "navmesh_include_static_objects": true,
+    "navmesh_include_static_objects": false,
     "enable_hbao": true
 }
