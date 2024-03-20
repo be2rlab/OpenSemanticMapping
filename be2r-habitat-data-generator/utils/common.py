@@ -30,6 +30,12 @@ def get_state_transform_matrix(sensor_state):
     matrix[:3, 3] = trans
     matrix[3, 3] = 1
 
+    matrix[:3, 1] *= -1
+    matrix[:3, 2] *= -1
+
+    # coords_rotation = np.diag([1, -1, -1, 1])
+    # matrix = coords_rotation @ matrix
+
     return matrix
 
 
@@ -41,14 +47,11 @@ def get_camera_matrix(agent):
 
     hfov = float(sensor_spec.hfov) * np.pi / 180.
 
-    # hfov = float(agent._sensors['color_sensor'].hfov) * np.pi / 180.
-    # fov = float(agent._sensors['color_sensor'].fov) * np.pi / 180.
-
     f = (1 / np.tan(hfov / 2.)) * w / 2
 
     K = np.array([
-        [f, 0., (h-1) / 2],
-        [0., f, (w-1) / 2],
+        [f, 0., (w-1) / 2],
+        [0., f, (h-1) / 2],
         [0., 0., 1]
     ])
 
@@ -62,24 +65,25 @@ def do_test_steps(sim, sim_settings, max_frames=5):
 
     for _ in range(max_frames):
         action = random.choice(action_names)
+        action = 'turn_left'
 
         print("action", action)
         observations = sim.step(action)
 
         rgb = observations["color_sensor"]
-        semantic = observations["semantic_sensor"]
-        depth = observations["depth_sensor"]
+        semantic = observations.get("semantic_sensor", None)
+        depth = observations.get("depth_sensor", None)
 
-        display_sample(rgb, semantic, depth)
+        display_sample(rgb, semantic_obs=semantic, depth_obs=depth)
 
 
-def place_agent(sim, sim_settings, start_point, start_rotation=None):
+def place_agent(sim, agent_index, start_point, start_rotation=None):
     agent_state = habitat_sim.AgentState()
     agent_state.position = start_point
 
     if start_rotation is not None:
         agent_state.rotation = start_rotation
 
-    sim.initialize_agent(sim_settings["default_agent"], agent_state)
+    sim.initialize_agent(agent_index, agent_state)
 
     return sim
