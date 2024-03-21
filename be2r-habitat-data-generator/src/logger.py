@@ -99,6 +99,12 @@ class ExperimentLogger:
 
         self.__step_index += 1
 
+    def save_camera_params(self, camera_matrix):
+        message = f"camera_matrix = \n{camera_matrix}\n\ndepth_scale = {self.sim_settings['depth_scale']}"
+
+        with open(os.path.join(self.output_dir_path, "camera_params.txt"), "w") as file:
+            file.write(message)
+
     def add_entry(self, message, print=False):
         if print:
             print(message)
