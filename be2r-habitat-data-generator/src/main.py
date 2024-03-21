@@ -1,10 +1,6 @@
 import numpy as np
 
-try:
-    __IPYTHON__
-    from tqdm.notebook import tqdm, trange
-except NameError:
-    from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 
 import habitat_sim
 from habitat.utils.visualizations import maps
@@ -122,8 +118,18 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
             logger.add_entry(msg, print=display)
             continue
 
-        with tqdm(total=len(path), desc=f'Navigation #{nav_index}', position=bar_inds[1]) as pbar:
+        pbar_kwargs = {
+            'total': len(path),
+            'desc': f'Navigation #{nav_index}',
+            'position': bar_inds[1] if len(bar_inds) >= 2 else None,
+            'disable': len(bar_inds) < 2,
+            'leave': False
+        }
+
+        with tqdm(**pbar_kwargs) as pbar:
             while True:
+                pbar.update()
+
                 try:
                     action = follower.next_action_along(nav_point)
                 except Exception as e:
@@ -153,4 +159,3 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
                     observations,
                     get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
                 )
-                pbar.update()
