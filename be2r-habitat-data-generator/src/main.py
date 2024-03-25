@@ -105,7 +105,7 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
         sim, light_setup = change_lights(sim, sim_settings, light_settings, nav_index)
 
         msg = f'Light setup: {light_setup}'
-        logger.add_entry(msg, print=display)
+        logger.add_entry(msg, printed=display)
 
         agent = sim.agents[sim_settings["default_agent"]]
         follower = sim.make_greedy_follower(sim_settings["default_agent"])
@@ -115,7 +115,7 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
         except Exception as e:
             msg = f'Path exception: {e}. Skip goal.'
 
-            logger.add_entry(msg, print=display)
+            logger.add_entry(msg, printed=display)
             continue
 
         pbar_kwargs = {
@@ -135,7 +135,7 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
                 except Exception as e:
                     msg = f'Path exception: {e}. Skip goal.'
 
-                    logger.add_entry(msg, print=display)
+                    logger.add_entry(msg, printed=display)
                     break
 
                 if action in ['error', 'stop', None]:

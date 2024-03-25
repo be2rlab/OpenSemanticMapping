@@ -105,8 +105,8 @@ class ExperimentLogger:
         with open(os.path.join(self.output_dir_path, "camera_params.txt"), "w") as file:
             file.write(message)
 
-    def add_entry(self, message, print=False):
-        if print:
+    def add_entry(self, message, printed=False):
+        if printed:
             print(message)
 
         with open(os.path.join(self.output_dir_path, "log.txt"), "a") as log_file:
