@@ -1,6 +1,10 @@
 import numpy as np
 
-from tqdm.auto import tqdm, trange
+try:
+    __IPYTHON__
+    from tqdm.notebook import tqdm, trange
+except NameError:
+    from tqdm import tqdm, trange
 
 import habitat_sim
 from habitat.utils.visualizations import maps
@@ -159,3 +163,82 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
                     observations,
                     get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
                 )
+
+
+def run_scenario_optimized(sim_planner, sim_agent, sim_settings_planner,
+                      sim_settings_agent, light_settings, navigatable_points,
+                      logger, step_multiplier, angle_multiplier,
+                      display=True, display_freq=50, bar_inds=[0, 1]):
+    
+    for nav_index, nav_point in enumerate(tqdm(navigatable_points, desc=f'{logger} proccessing', position=bar_inds[0])):
+        
+        sim_planner, light_setup_planner = change_lights(sim_planner, sim_settings_planner, light_settings, nav_index)
+        sim_agent, light_setup_agent = change_lights(sim_agent, sim_settings_agent, light_settings, nav_index)
+
+        msg = f'Light setup: {light_setup_agent}'
+
+        logger.add_entry(msg, printed=display)
+
+        agent_agent = sim_agent.agents[sim_settings_agent["default_agent"]]
+        agent_planner = sim_planner.agents[sim_settings_planner["default_agent"]]
+        
+        print(f"agent: {sim_settings_planner['default_agent']}")
+        
+        follower = sim_planner.make_greedy_follower(sim_settings_planner["default_agent"])
+        
+        # 1 поворот в планнере равен 10 поворотам агента
+        # 1 шаг в планнере равен 50 шагам агента
+        try:
+            path = follower.find_path(nav_point)
+        except Exception as e:
+            msg = f'Path exception: {e}. Skip goal.'
+
+            logger.add_entry(msg, printed=display)
+            continue
+        
+        print(f"Nav index: {nav_index}")
+        print(f"Nav point: {nav_point}")
+        agent_path = transform(path, step_multiplier, angle_multiplier)
+        print(f"Planner Path: {path}")
+        print(f"Agent Path: {agent_path}")
+        
+                
+        
+        with tqdm(total=len(agent_path), desc=f'Navigation #{nav_index}', position=bar_inds[1]) as pbar:
+            for action in agent_path:
+                observations = sim_agent.step(action)
+                
+                if display:
+                    if logger.get_step_index() % display_freq == 0:
+                        rgb = observations["color_sensor"]
+                        semantic = observations.get("semantic_sensor", None)
+                        depth = observations.get("depth_sensor", None)
+
+                        display_sample(rgb, semantic_obs=semantic, depth_obs=depth)
+
+                logger.save_step(
+                    observations,
+                    get_state_transform_matrix(agent_agent.state.sensor_states['color_sensor']).flatten()
+                )
+                pbar.update()
+
+def transform(old, step_multiplier, angle_multiplier):
+    res = []
+    
+    for elem in old:
+        if elem == 'turn_left':
+            for _ in range(angle_multiplier):
+                res.append(elem)
+        elif elem == 'turn_right':
+            for _ in range(angle_multiplier):
+                res.append(elem)
+        elif elem == 'move_forward':
+            for _ in range(step_multiplier):
+                res.append(elem)
+        elif elem in ['error', 'stop', None]:
+            res.append(elem)
+
+    return res
+
+
+

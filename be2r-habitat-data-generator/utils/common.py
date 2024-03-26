@@ -19,6 +19,25 @@ def create_simulator(sim_settings):
     return sim
 
 
+def create_simulators(sim_settings: dict, step_multiplier: int, angle_multiplier: int):
+    sim_settings_planner = sim_settings.copy()
+    sim_settings_planner['move_actuation_amount'] = sim_settings['move_actuation_amount'] * step_multiplier
+    sim_settings_planner['turn_actuation_amount'] = sim_settings['turn_actuation_amount'] * angle_multiplier
+
+    # test
+    
+    cfg_agent = make_cfg(sim_settings)
+    cfg_planner = make_cfg(sim_settings_planner)
+    
+    sim_agent = habitat_sim.Simulator(cfg_agent)
+    sim_planner = habitat_sim.Simulator(cfg_planner)
+
+    random.seed(sim_settings["seed"])
+    sim_agent.seed(sim_settings["seed"])
+    sim_planner.seed(sim_settings["seed"])
+
+    return sim_agent, sim_planner, sim_settings_planner
+    
 def get_state_transform_matrix(sensor_state):
     quat = sensor_state.rotation
     trans = sensor_state.position
