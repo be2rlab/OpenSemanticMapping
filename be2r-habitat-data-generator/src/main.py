@@ -2,7 +2,6 @@ import numpy as np
 
 from tqdm.auto import tqdm, trange
 
-import habitat_sim
 from habitat.utils.visualizations import maps
 
 from src.lights import change_lights
@@ -21,21 +20,12 @@ def check_path_finding(follower, point):
 
 def get_navigable_point(sim, sim_settings, prev_point=None):
     finder = sim.pathfinder
-    radius = sim_settings['agent_radius']
 
-    if prev_point is None:
-        get_point = lambda: finder.get_random_navigable_point(max_tries=1000)
-    else:
-        get_point = lambda: finder.get_random_navigable_point_near(
-            circle_center=prev_point,
-            radius = 1_000 * sim_settings['move_actuation_amount'],
-            max_tries=1000,
-        )
+    get_point = lambda: finder.get_random_navigable_point(max_tries=1_000)
 
     point = get_point()
 
-    while np.isnan(point).sum() > 0 or  \
-            finder.distance_to_closest_obstacle(point, radius * 2) < radius:
+    while np.isnan(point).sum() > 0:
         point = get_point()
 
     return point
@@ -45,10 +35,9 @@ def generate_scenario(sim, sim_settings, display=True):
     if not sim.pathfinder.is_loaded:
         print("Pathfinder not initialized, aborting.")
     else:
-        nav_points_number= sim_settings['nav_points_number']
+        nav_points_number = sim_settings['nav_points_number']
 
-        pathfinder_seed = sim_settings['seed']
-        sim.pathfinder.seed(pathfinder_seed)
+        sim.pathfinder.seed(sim_settings['seed'])
 
         start_point = get_navigable_point(sim, sim_settings)
 
@@ -100,15 +89,20 @@ def generate_scenario(sim, sim_settings, display=True):
     return start_point, navigatable_points
 
 
-def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, display=True, display_freq=50, bar_inds=[0, 1]):
+def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, display=True, bar_inds=[0, 1], frequent=True):
     for nav_index, nav_point in enumerate(tqdm(navigatable_points, desc=f'{logger} proccessing', position=bar_inds[0])):
         sim, light_setup = change_lights(sim, sim_settings, light_settings, nav_index)
 
         msg = f'Light setup: {light_setup}'
         logger.add_entry(msg, printed=display)
 
-        agent = sim.agents[sim_settings["default_agent"]]
-        follower = sim.make_greedy_follower(sim_settings["default_agent"])
+        follower = sim.make_greedy_follower(
+            agent_id = sim_settings['default_agent'],
+            goal_radius = sim_settings.get('goal_radius', None),
+            forward_key = 'move_forward',
+            left_key = 'turn_left',
+            right_key = 'turn_right'
+        )
 
         try:
             path = follower.find_path(nav_point)
@@ -127,35 +121,60 @@ def run_scenario(sim, sim_settings, light_settings, navigatable_points, logger, 
         }
 
         with tqdm(**pbar_kwargs) as pbar:
-            while True:
-                pbar.update()
+            _navigation_loop(sim, sim_settings, follower, nav_point, pbar, logger, display, frequent)
 
-                try:
-                    action = follower.next_action_along(nav_point)
-                except Exception as e:
-                    msg = f'Path exception: {e}. Skip goal.'
 
-                    logger.add_entry(msg, printed=display)
-                    break
+def _navigation_loop(sim, sim_settings, follower, nav_point, pbar, logger, display, frequent):
+    agent = sim.agents[sim_settings["default_agent"]]
 
-                if action in ['error', 'stop', None]:
-                    msg = f"Final action: {action}"
-                    logger.add_entry(msg)
-                    break
-                else:
-                    logger.add_entry(f'Action: {action}')
+    logger.add_entry('Start navigating.', printed=display)
 
-                observations = sim.step(action)
+    while True:
+        pbar.update()
 
-                if display:
-                    if logger.get_step_index() % display_freq == 0:
-                        rgb = observations["color_sensor"]
-                        semantic = observations.get("semantic_sensor", None)
-                        depth = observations.get("depth_sensor", None)
+        try:
+            action = follower.next_action_along(nav_point)
+        except Exception as e:
+            msg = f'Path exception: {e}. Reached or error occured. Skip goal.'
 
-                        display_sample(rgb, semantic_obs=semantic, depth_obs=depth)
+            logger.add_entry(msg, printed=display)
+            break
 
-                logger.save_step(
-                    observations,
-                    get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
-                )
+        if action in ['error', 'stop', None]:
+            msg = f"Final action: {action}"
+            logger.add_entry(msg, printed=False)
+            break
+        else:
+            logger.add_entry(f'Action: {action}', printed=False)
+
+        if frequent:
+            _navigation_step_freq(sim, sim_settings, agent, action, logger)
+        else:
+            _navigation_step(sim, agent, action, logger)
+
+    logger.add_entry(f'Stop navigating.', printed=display)
+
+
+def _navigation_step_freq(sim, sim_settings, agent, action, logger):
+    multiplier = {
+        'move_forward': sim_settings['move_freq_multiplier'],
+        'turn_left': sim_settings['turn_freq_multiplier'],
+        'turn_right': sim_settings['turn_freq_multiplier'],
+    }[action]
+
+    for _ in range(multiplier):
+        observations = sim.step(action + '_freq')
+
+        logger.save_step(
+            observations,
+            get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
+        )
+
+
+def _navigation_step(sim, agent, action, logger):
+    observations = sim.step(action)
+
+    logger.save_step(
+        observations,
+        get_state_transform_matrix(agent.state.sensor_states['color_sensor']).flatten()
+    )

@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 
 from utils.settings import load_sim_settings, load_light_settings
+from utils.visual import display_sample
 
 
 def get_output_paths(dir_path, dataset_name, scene_name, label):
@@ -37,7 +38,7 @@ def get_output_paths(dir_path, dataset_name, scene_name, label):
 
 
 class ExperimentLogger:
-    def __init__(self, sim_settings_filename, package_dir_path='./') -> None:
+    def __init__(self, sim_settings_filename, package_dir_path='./', display=False, display_freq=50) -> None:
         self.__sim_settings_filename = sim_settings_filename
 
         configs_path = os.path.join(package_dir_path, 'configs/')
@@ -60,12 +61,18 @@ class ExperimentLogger:
 
         self.depth_scale = self.sim_settings['depth_scale']
 
-        self.__step_index = 0
+        self._step_index = 0
+
+        self._display = display
+        self._display_freq = display_freq
 
     def __str__(self) -> str:
         return self.__sim_settings_filename
+    
+    def set_display(self, display: bool) -> None:
+        self._display = display
 
-    def save_step(self, observations, transformation_matrix):
+    def save_step(self, observations, transformation_matrix, display=None):
         if "color_sensor" in observations:
             rgb_image = Image.fromarray(observations["color_sensor"]).convert('RGB')
             rgb_image.save(os.path.join(
@@ -97,15 +104,32 @@ class ExperimentLogger:
             np.savetxt(traj_file, transformation_matrix, newline=" ")
             traj_file.write("\n")
 
-        self.__step_index += 1
+        display = self._display if display is None else display
 
-    def save_camera_params(self, camera_matrix):
+        if display:
+            if self._step_index % self._display_freq == 0:
+                rgb = observations["color_sensor"]
+                semantic = observations.get("semantic_sensor", None)
+                depth = observations.get("depth_sensor", None)
+
+                display_sample(rgb, semantic_obs=semantic, depth_obs=depth)
+
+        self._step_index += 1
+
+    def save_camera_params(self, camera_matrix, printed=None):
+        printed = self._display if printed is None else printed
+
         message = f"camera_matrix = \n{camera_matrix}\n\ndepth_scale = {self.sim_settings['depth_scale']}"
+
+        if printed:
+            print(message)
 
         with open(os.path.join(self.output_dir_path, "camera_params.txt"), "w") as file:
             file.write(message)
 
-    def add_entry(self, message, printed=False):
+    def add_entry(self, message, printed=None):
+        printed = self._display if printed is None else printed
+
         if printed:
             print(message)
 
@@ -113,10 +137,10 @@ class ExperimentLogger:
             log_file.write(f'[{self.get_str_index()}] {message}\n')
 
     def get_step_index(self):
-        return self.__step_index
+        return self._step_index
     
     def get_str_index(self):
-        return str(self.__step_index).zfill(6)
+        return str(self._step_index).zfill(6)
 
     def get_settings(self):
         return self.sim_settings, self.light_settings
