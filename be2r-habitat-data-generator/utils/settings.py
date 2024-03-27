@@ -8,6 +8,8 @@ import habitat_sim
 import habitat_sim.agent
 from habitat_sim.bindings import built_with_bullet
 
+from src import actions
+
 # TODO: add noise model and znear
 
 BLACK = mn.Color4.from_linear_rgb_int(0)
@@ -64,7 +66,6 @@ default_sim_settings: Dict[str, Any] = {
     "turn_actuation_amount": 1,
 }
 # [/default_sim_settings]
-
 
 # build SimulatorConfiguration
 def make_cfg(settings: Dict[str, Any]):
@@ -261,6 +262,20 @@ def make_cfg(settings: Dict[str, Any]):
     agent_cfg.height = settings["sensor_height"]
     agent_cfg.radius = settings["agent_radius"]
     agent_cfg.sensor_specifications = sensor_specs
+
+    assert type(settings['turn_freq_multiplier']) == int
+    assert type(settings['move_freq_multiplier']) == int
+
+    habitat_sim.registry.register_move_fn(
+        actions.MoveForwardFreq, name="move_forward_freq", body_action=True
+    )
+    habitat_sim.registry.register_move_fn(
+        actions.TurnLeftFreq, name="turn_left_freq", body_action=True
+    )
+    habitat_sim.registry.register_move_fn(
+        actions.TurnRightFreq, name="turn_right_freq", body_action=True
+    )
+
     agent_cfg.action_space = {
         "move_forward": habitat_sim.agent.ActionSpec(
             "move_forward", habitat_sim.agent.ActuationSpec(amount=settings['move_actuation_amount'])
@@ -271,6 +286,24 @@ def make_cfg(settings: Dict[str, Any]):
         "turn_right": habitat_sim.agent.ActionSpec(
             "turn_right", habitat_sim.agent.ActuationSpec(amount=settings['turn_actuation_amount'])
         ),
+        "move_forward_freq": habitat_sim.agent.ActionSpec(
+            "move_forward_freq", actions.FreqActuationSpec(
+                amount=settings['move_actuation_amount'],
+                multiplier=settings['move_freq_multiplier']
+            )
+        ),
+        "turn_left_freq": habitat_sim.agent.ActionSpec(
+            "turn_left_freq", actions.FreqActuationSpec(
+                amount=settings['turn_actuation_amount'],
+                multiplier=settings['turn_freq_multiplier']
+            )
+        ),
+        "turn_right_freq": habitat_sim.agent.ActionSpec(
+            "turn_right_freq", actions.FreqActuationSpec(
+                amount=settings['turn_actuation_amount'], 
+                multiplier=settings['turn_freq_multiplier']
+            )
+        )
     }
 
     # construct a NavMeshSettings from default agent paramters for SimulatorConfiguration
