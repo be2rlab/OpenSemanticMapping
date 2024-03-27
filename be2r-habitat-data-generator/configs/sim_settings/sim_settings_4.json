@@ -14,9 +14,12 @@
 
     "depth_scale": 6553.5,
     "nav_points_number": 10,
-    
+
     "move_actuation_amount": 0.01,
-    "turn_actuation_amount": 1.0,
+    "turn_actuation_amount": 2.0,
+
+    "move_freq_multiplier": 2,
+    "turn_freq_multiplier": 2,
 
     "default_agent": 0,
     "agent_radius": 0.2,
@@ -40,7 +43,7 @@
     "seed": 2,
 
     "enable_physics": true,
-    "default_agent_navmesh": true,
+    "default_agent_navmesh": false,
     "navmesh_include_static_objects": false,
     "enable_hbao": true
 }
