@@ -18,7 +18,7 @@ services:
     volumes:
       - /tmp/.X11-unix/:/tmp/.X11-unix
       - $ROOT_DIR/concept-graphs:/opt/src
-      - $ROOT_DIR/assets:/assets
+      - $ASSETS_DIR:/assets
       - $DATA_DIR:/data/
       - $ROOT_DIR/export:/export/
     runtime: nvidia

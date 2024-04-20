@@ -7,7 +7,7 @@ ROOT_DIR := $(MKFILE_DIR)
 DOCKER_COMPOSE_FILES := \
 	-f docker-compose.yaml
 
-DATA_DIR ?= $(ROOT_DIR)/../Datasets
+DATA_DIR ?= $(ROOT_DIR)/../data
 ASSETS_DIR ?= $(ROOT_DIR)/../assets
 
 PARAMETERS := ROOT_DIR=$(ROOT_DIR) \
