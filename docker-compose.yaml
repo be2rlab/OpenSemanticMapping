@@ -25,6 +25,32 @@ services:
     privileged: true
     command: bash
   
+
+    openmask3d:
+    build:
+      context: $ROOT_DIR/
+      dockerfile: $ROOT_DIR/docker/openmask3d.Dockerfile
+    image: open_semantic/openmask3d:latest
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    environment:
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=$DISPLAY
+      - VGL_DISPLAY=${RENDER_DISPLAY:-":1"}
+    volumes:
+      - /tmp/.X11-unix/:/tmp/.X11-unix
+      - $ROOT_DIR/openmask3d:/opt/src
+      - $ROOT_DIR/assets:/assets
+      - $DATA_DIR:/data/
+      - $ROOT_DIR/export:/export/
+    runtime: nvidia
+    privileged: true
+    command: bash
+
+    
   # concept_fusion:
   #   build:
   #     context: ./
