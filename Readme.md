@@ -1,4 +1,3 @@
-
 # Open Semantic Mapping Evaluation Pipeline
 ## Contents:
 - Concept-Graphs 
@@ -12,8 +11,8 @@
 
 ### Build docker
 ```bash
-git clone https://github.com/JaafarMahmoud1/open_semantic_pipeline.git
-cd open_semantic_pipeline
+git clone https://github.com/be2rlab/OpenSemanticMapping.git
+cd OpenSemanticMapping
 make build-concept-graphs
 ```
 
@@ -29,7 +28,7 @@ TBD
 
 ### Visualization
 ```bash
-make prepare-terminal-for-visualization:
+make prepare-terminal-for-visualization
 ```
 
 ### RUN
