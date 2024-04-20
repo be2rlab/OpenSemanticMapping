@@ -12,8 +12,8 @@
 
 ### Build docker
 ```bash
-git clone https://github.com/JaafarMahmoud1/open_semantic_pipeline.git
-cd open_semantic_pipeline
+git clone https://github.com/be2rlab/OpenSemanticMapping.git
+cd OpenSemanticMapping
 make build-concept-graphs
 ```
 
@@ -24,7 +24,7 @@ bash ./datasets/scripts/download_replica.sh
 
 ### Download All Assets
 ```bash 
-TBD
+download from https://disk.yandex.ru/d/lAWeTD3SSNncaA
 ```
 
 ### Visualization
