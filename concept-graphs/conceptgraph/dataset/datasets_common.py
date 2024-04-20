@@ -470,6 +470,7 @@ class ReplicaDataset(GradSLAMDataset):
             lines = f.readlines()
         for i in range(self.num_imgs):
             line = lines[i]
+            # c2w = np.diag([1, -1, -1, 1]) @ np.array(list(map(float, line.split()))).reshape(4, 4)
             c2w = np.array(list(map(float, line.split()))).reshape(4, 4)
             # c2w[:3, 1] *= -1
             # c2w[:3, 2] *= -1

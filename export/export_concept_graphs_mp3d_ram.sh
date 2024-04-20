@@ -4,13 +4,13 @@ export GSA_PATH=/tmp/Grounded-Segment-Anything
 export LLAVA_PYTHON_PATH=/tmp/LLaVA
 export LLAVA_MODEL_PATH=/assets/llm/llava-v1.5-13b
 export LLAVA_CKPT_PATH=/assets/llm/llava-v1.5-13b
-export REPLICA_ROOT=/data/Datasets/Light
+export REPLICA_ROOT=/data/generated/hm3d_minival/
 export CG_FOLDER=/opt/src
 export REPLICA_CONFIG_PATH=${CG_FOLDER}/conceptgraph/dataset/dataconfigs/light/light.yaml
 export OPENAI_API_KEY=""
-export SCENE_NAMES=higher_freq_small
-export SCENE_NAME=higher_freq_small
-export CLASS_SET=none
+export SCENE_NAMES="00800-TEEsavR23oF"
+export SCENE_NAME="00800-TEEsavR23oF"
+export CLASS_SET=ram
 export THRESHOLD=1.2
 
 python ${CG_FOLDER}/conceptgraph/scripts/generate_gsa_results.py \

@@ -4,12 +4,12 @@ export GSA_PATH=/tmp/Grounded-Segment-Anything
 export LLAVA_PYTHON_PATH=/tmp/LLaVA
 export LLAVA_MODEL_PATH=/assets/llm/llava-v1.5-13b
 export LLAVA_CKPT_PATH=/assets/llm/llava-v1.5-13b
-export REPLICA_ROOT=/data/Datasets/Light
+export REPLICA_ROOT=/data/generated/replica_cad/
 export CG_FOLDER=/opt/src
-export REPLICA_CONFIG_PATH=${CG_FOLDER}/conceptgraph/dataset/dataconfigs/light/light.yaml
+export REPLICA_CONFIG_PATH=${CG_FOLDER}/conceptgraph/dataset/dataconfigs/replica/replica.yaml
 export OPENAI_API_KEY=""
-export SCENE_NAMES=higher_freq_small
-export SCENE_NAME=higher_freq_small
+export SCENE_NAMES="v3_sc0_staging_00/default_lights_0/"
+export SCENE_NAME="v3_sc0_staging_00/default_lights_0/"
 export CLASS_SET=none
 export THRESHOLD=1.2
 
