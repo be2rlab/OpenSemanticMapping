@@ -3,11 +3,13 @@
 - Concept-Graphs 
 - Concept-Fusion (Todo)
 - Open-Fusion (Todo)
-- OpenMask3D (Todo)
+- OpenMask3D
 - OVSG (Todo)
 - OVIR-3D (Todo)
 - Semantic Abstraction (Todo)
 - PLA (Todo)
+
+## Concept-graphs:
 
 ### Build docker
 ```bash
@@ -23,7 +25,7 @@ bash ./datasets/scripts/download_replica.sh
 
 ### Download All Assets
 ```bash 
-TBD
+download from https://disk.yandex.ru/d/lAWeTD3SSNncaA
 ```
 
 ### Visualization
@@ -42,3 +44,20 @@ Inside the docker you can edit the export files in export folder, and then run o
 bash /export/export_concept_graphs_light_ram.sh
 ```
 
+## OpenMask3D:
+
+### Build docker
+```bash
+make build-openmask3d
+```
+
+### Transform dataset
+```
+sudo python3 ./datasets/scripts/transformations/transform_to_openmask3d_format.py
+```
+Change DATASET_PATH variable in the transform_to_openmask3d_format.py scipt by the path to the dataset you want to transform.
+
+### RUN
+```bash
+make run-openmask3d
+```
