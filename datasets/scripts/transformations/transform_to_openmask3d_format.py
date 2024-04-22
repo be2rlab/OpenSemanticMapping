@@ -17,14 +17,12 @@ DATASET_PATH = "Datasets/Replica/room0"
 ROOT_DIR = os.getcwd()
 DATASET_DIR = os.path.join(ROOT_DIR, DATASET_PATH)
 DATASET_NAME = os.path.basename(DATASET_DIR)
-TRANSFORMED_DATASET_DIR = os.path.join(ROOT_DIR, "Datasets", "openmask3d_datasets", DATASET_NAME)
+TRANSFORMED_DATASET_DIR = os.path.join(ROOT_DIR, "datasets", "data", "Datasets", "openmask3d_datasets", DATASET_NAME)
 
 
 
 # Creating a directory for the transformed dataset
-if not os.path.exists("Datasets"):
-    os.mkdir("Datasets")
-os.chdir("Datasets")
+os.chdir(os.path.join(ROOT_DIR, "datasets", "data", "Datasets"))
 if not os.path.exists("openmask3d_datasets"):
     os.mkdir("openmask3d_datasets")
 os.chdir("openmask3d_datasets")

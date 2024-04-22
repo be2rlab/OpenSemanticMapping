@@ -26,7 +26,7 @@ services:
     command: bash
   
 
-    openmask3d:
+  openmask3d:
     build:
       context: $ROOT_DIR/
       dockerfile: $ROOT_DIR/docker/openmask3d.Dockerfile
