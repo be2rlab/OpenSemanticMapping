@@ -1,4 +1,4 @@
-cd datasets/data
+cd ../data
 mkdir -p Datasets
 cd Datasets
 # you can also download the Replica.zip manually through
