@@ -2,37 +2,23 @@ import os
 import shutil
 import glob
 import json
-
-
-
-
-# Change this to specify the dataset you are working with (relative path from OpenSemanticMapping directory)
-DATASET_PATH = "Datasets/Replica/room0"
- 
-
-
+import sys
 
 
 
 ROOT_DIR = os.getcwd()
-DATASET_DIR = os.path.join(ROOT_DIR, DATASET_PATH)
+os.chdir(sys.argv[1])
+DATASET_DIR = os.getcwd()
 DATASET_NAME = os.path.basename(DATASET_DIR)
-TRANSFORMED_DATASET_DIR = os.path.join(ROOT_DIR, "datasets", "data", "Datasets", "openmask3d_datasets", DATASET_NAME)
+os.chdir(ROOT_DIR)
+os.chdir(sys.argv[2])
+TRANSFORMED_DATASET_DIR = os.getcwd()
 
-
-
-# Creating a directory for the transformed dataset
-os.chdir(os.path.join(ROOT_DIR, "datasets", "data", "Datasets"))
-if not os.path.exists("openmask3d_datasets"):
-    os.mkdir("openmask3d_datasets")
-os.chdir("openmask3d_datasets")
-if not os.path.exists(DATASET_NAME):
-    os.mkdir(DATASET_NAME)
 
 
 
 # Making subdirectories 
-os.chdir(DATASET_NAME)
+os.chdir(TRANSFORMED_DATASET_DIR)
 os.mkdir("color")
 os.mkdir("depth")
 os.mkdir("pose")

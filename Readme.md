@@ -53,9 +53,8 @@ make build-openmask3d
 
 ### Transform dataset
 ```
-sudo python3 ./datasets/scripts/transformations/transform_to_openmask3d_format.py
+sudo python3 ./datasets/scripts/transformations/transform_to_openmask3d_format.py /path/to/original/dataset/folder /path/to/output/folder
 ```
-Change DATASET_PATH variable in the transform_to_openmask3d_format.py scipt by the path to the dataset you want to transform.
 
 ### RUN
 ```bash
