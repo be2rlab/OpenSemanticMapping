@@ -40,6 +40,17 @@ run-concept-graphs:
 	$(PARAMETERS) \
 	docker compose run concept_graphs
 
+build-openmask3d:
+	cd $(ROOT_DIR) && \
+        $(PARAMETERS) \
+        docker compose build openmask3d
+
+run-openmask3d: 
+	 cd $(ROOT_DIR) && \
+        $(PARAMETERS) \
+        docker compose run openmask3d
+
+
 # build-concept-fusion:
 # 	cd $(ROOT_DIR) && \
 # 	docker compose build concept_fusion
