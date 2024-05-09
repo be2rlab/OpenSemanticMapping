@@ -217,13 +217,13 @@ def compute_clip_features(
         cropped_image = image.crop((x_min, y_min, x_max, y_max))
 
         # Get the preprocessed image for clip from the crop
-        preprocessed_image = clip_preprocess(cropped_image).unsqueeze(0).to("cuda")
+        preprocessed_image = clip_preprocess(cropped_image).unsqueeze(0).to(device)
 
         crop_feat = clip_model.encode_image(preprocessed_image)
         crop_feat /= crop_feat.norm(dim=-1, keepdim=True)
 
         class_id = detections.class_id[idx]
-        tokenized_text = clip_tokenizer([classes[class_id]]).to("cuda")
+        tokenized_text = clip_tokenizer([classes[class_id]]).to(device)
         text_feat = clip_model.encode_text(tokenized_text)
         text_feat /= text_feat.norm(dim=-1, keepdim=True)
 
@@ -297,7 +297,7 @@ def get_sam_predictor(variant: str, device: str | int) -> SamPredictor:
 
 # The SAM based on automatic mask generation, without bbox prompting
 def get_sam_segmentation_dense(
-    variant: str, model: Any, image: np.ndarray
+    variant: str, model: Any, image: np.ndarray, device: str
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     The SAM based on automatic mask generation, without bbox prompting
@@ -333,7 +333,7 @@ def get_sam_segmentation_dense(
         results = model(
             image,
             imgsz=1024,
-            device="cuda",
+            device=device,
             retina_masks=True,
             iou=0.9,
             conf=0.4,
@@ -415,12 +415,15 @@ def process_ai2thor_classes(
 
 
 def main(args: argparse.Namespace):
-    ### Initialize the Grounding DINO model ###
-    grounding_dino_model = Model(
-        model_config_path=GROUNDING_DINO_CONFIG_PATH,
-        model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH,
-        device=args.device,
-    )
+    ### Initialize the Grounding DINO model or YOLO ###
+    if args.detector == "dino":
+        grounding_dino_model = Model(
+            model_config_path=GROUNDING_DINO_CONFIG_PATH,
+            model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH,
+            device=args.device,
+        )
+    elif args.detector == "yolo":
+        yolo_model_w_classes = YOLO("yolov8l-world.pt")  # or choose yolov8m/l-world.pt
 
     ### Initialize the SAM model ###
     if args.class_set == "none":
@@ -451,9 +454,6 @@ def main(args: argparse.Namespace):
     )
 
     global_classes = set()
-
-    # Initialize a YOLO-World model
-    yolo_model_w_classes = YOLO("yolov8l-world.pt")  # or choose yolov8m/l-world.pt
 
     if args.class_set == "scene":
         # Load the object meta information
@@ -629,7 +629,7 @@ def main(args: argparse.Namespace):
         if args.class_set == "none":
             # Directly use SAM in dense sampling mode to get segmentation
             mask, xyxy, conf = get_sam_segmentation_dense(
-                args.sam_variant, mask_generator, image_rgb
+                args.sam_variant, mask_generator, image_rgb, args.device
             )
             detections = sv.Detections(
                 xyxy=xyxy,
