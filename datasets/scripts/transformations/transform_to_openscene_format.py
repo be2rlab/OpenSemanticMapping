@@ -74,9 +74,9 @@ def process_one_scene_3d(fn):
 
 
 #####################################
-out_dir = os.path.join(sys.argv[1], "replica_2d")
-in_path = sys.argv[2]
-sample_freq = 10
+out_dir = os.path.join(sys.argv[2], "replica_2d")
+in_path = sys.argv[1]
+sample_freq = 1
 #####################################
 
 os.makedirs(out_dir, exist_ok=True)
@@ -130,7 +130,7 @@ p.close()
 
 
 #####################################
-out_dir = os.path.join(sys.argv[1], "replica_3d")
+out_dir = os.path.join(sys.argv[2], "replica_3d")
 #####################################
 
 os.makedirs(out_dir, exist_ok=True)
