@@ -105,5 +105,5 @@ python ./scripts/feature_fusion/replica_openseg.py \
 ### Specific settings 
 Inside the docker you can edit the export files in export folder, and then run one of them
 ```bash
-bash /export/export_openmask3d_replica.sh
+bash /export/export_openscene_replica.sh
 ```

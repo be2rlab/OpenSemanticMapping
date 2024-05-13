@@ -1,7 +1,7 @@
 # Codes are taken from BPNet, CVPR'21
 # https://github.com/wbhu/BPNet/blob/main/dataset/voxelizer.py
 
-import collections
+import collections.abc as collections
 import numpy as np
 from dataset.voxelization_utils import sparse_quantize
 from scipy.linalg import expm, norm

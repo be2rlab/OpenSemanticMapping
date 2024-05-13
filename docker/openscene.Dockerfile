@@ -1,23 +1,25 @@
-FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-devel AS base
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-devel AS base
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -y && apt install -y git-all
 
-WORKDIR /opt/src/
+WORKDIR /opt/src
+
 COPY ${ROOT_DIR}/openscene ./
 
-RUN apt-get install -y libopenexr-dev
+ENV TORCH_CUDA_ARCH_LIST="3.5;5.0;6.0;6.1;7.0;7.5;8.0;8.6+PTX"
+ENV CUDA_HOME="/usr/local/cuda-11.6"
+ENV CXX="c++"
 
-RUN pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cu118
 RUN apt install -y build-essential python3-dev libopenblas-dev
 
+RUN pip install ninja==1.10.2.3
 
-RUN pip install -U git+https://github.com/NVIDIA/MinkowskiEngine -v --no-deps \
---config-settings="--cuda=force_cuda" \
---config-settings="--blas=openblas"
+RUN conda install -y openblas-devel -c anaconda
+
+RUN pip install -U git+https://github.com/NVIDIA/MinkowskiEngine -v --no-deps --install-option="--force_cuda"
 
 RUN pip install -r requirements.txt
-
 RUN pip install tensorflow
 
 CMD ["bash"]
