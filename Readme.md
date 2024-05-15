@@ -112,9 +112,16 @@ bash /export/export_openscene_replica.sh
 Inside the docker you can run the following to visualize the results
 ```bash
 cd ./demo/gaps
-make 
+make
 
-cd ..
-./run_demo
+cd pkgs/RNNets
+make
+
+cd ../../apps/osview
+make
+
+/opt/src/demo/run_demo
 ```
 To change the inputs you can open run_demo
+
+In the opened window you can type queries!
