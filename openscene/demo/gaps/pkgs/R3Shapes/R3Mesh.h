@@ -229,6 +229,8 @@ class R3Mesh {
       // Returns the line supporting the edge
     R3Box EdgeBBox(const R3MeshEdge *edge) const;
       // Returns the bounding box of the edge
+    RNAngle EdgeSwapAngleImprovement(const R3MeshEdge *edge) const;
+      // Returns the improvement of interior angles if swap edge
     int EdgeID(const R3MeshEdge *edge) const;
       // Returns the ID stored with a edge
     RNFlags EdgeFlags(const R3MeshEdge *edge) const;
@@ -558,13 +560,13 @@ class R3Mesh {
       // Create mesh elements for a copy of mesh
 
     // DRAW FUNCTIONS
-    virtual void Draw(void) const;
+    virtual void Draw(const R3DrawFlags draw_flags = R3_DEFAULT_DRAW_FLAGS) const;
       // Draws the faces
-    virtual void DrawVertices(void) const;
+    virtual void DrawVertices(const R3DrawFlags draw_flags = R3_DEFAULT_DRAW_FLAGS) const;
       // Draws the vertices
-    virtual void DrawEdges(void) const;
+    virtual void DrawEdges(const R3DrawFlags draw_flags = R3_DEFAULT_DRAW_FLAGS) const;
       // Draws the edges
-    virtual void DrawFaces(void) const;
+    virtual void DrawFaces(const R3DrawFlags draw_flags = R3_DEFAULT_DRAW_FLAGS) const;
       // Draws the faces
     virtual void DrawVertexIDs(void) const;
       // Draws the vertex IDs into color buffer
@@ -683,6 +685,20 @@ class R3Mesh {
       // Returns whether face data structure is valid
     void SetData(void *data);
       // Set the user data stored with mesh
+
+  public:
+    // VBO FUNCTIONS
+    virtual unsigned int GLFacePositionBufferObject(void) const;
+    virtual unsigned int GLFaceNormalBufferObject(void) const;
+    virtual unsigned int GLFaceTextureCoordBufferObject(void) const;
+    virtual unsigned int GLFaceRgbColorBufferObject(void) const;
+    virtual unsigned int GLFacePickColorBufferObject(void) const;
+    virtual unsigned int GLVertexPositionBufferObject(void) const;
+    virtual unsigned int GLVertexNormalBufferObject(void) const;
+    virtual unsigned int GLVertexTextureCoordBufferObject(void) const;
+    virtual unsigned int GLVertexRgbColorBufferObject(void) const;
+    virtual unsigned int GLVertexPickColorBufferObject(void) const;
+    virtual void InvalidateGLBufferObjects(void);
   
   protected:
     // INTERNAL DELETE FUNCTIONS
@@ -696,9 +712,10 @@ class R3Mesh {
     virtual void UpdateFaceArea(R3MeshFace *f) const;
     virtual void UpdateFacePlane(R3MeshFace *f) const;  
     virtual void UpdateFaceBBox(R3MeshFace *f) const;  
-    virtual void UpdateFaceRefs(R3MeshFace *f, R3MeshVertex *v1, R3MeshVertex *v2, R3MeshVertex *v3,
-                                R3MeshEdge *e1, R3MeshEdge *e2, R3MeshEdge *e3);
-  
+    virtual void UpdateFaceRefs(R3MeshFace *f,
+      R3MeshVertex *v1, R3MeshVertex *v2, R3MeshVertex *v3,
+      R3MeshEdge *e1, R3MeshEdge *e2, R3MeshEdge *e3);
+
   protected:
     // Arrays of all vertices, edges, faces
     RNArray<R3MeshVertex *> vertices;
@@ -709,6 +726,18 @@ class R3Mesh {
     R3MeshVertex *vertex_block;
     R3MeshEdge *edge_block;
     R3MeshFace *face_block;
+
+    // OpenGL buffer ids
+    unsigned int vbo_face_position_buffer;
+    unsigned int vbo_face_normal_buffer;
+    unsigned int vbo_face_texcoord_buffer;
+    unsigned int vbo_face_rgb_color_buffer;
+    unsigned int vbo_face_pick_color_buffer;
+    unsigned int vbo_vertex_position_buffer;
+    unsigned int vbo_vertex_normal_buffer;
+    unsigned int vbo_vertex_texcoord_buffer;
+    unsigned int vbo_vertex_rgb_color_buffer;
+    unsigned int vbo_vertex_pick_color_buffer;
 
     // Other attributes
     char name[R3_MESH_NAME_LENGTH];
@@ -1805,11 +1834,14 @@ IsFaceOnMesh(const R3MeshFace *f) const
 ////////////////////////////////////////////////////////////////////////
 
 inline void R3Mesh:: 
-Draw(void) const
+Draw(const R3DrawFlags draw_flags) const
 {
   // Draw the mesh
-  DrawFaces();
+  if (draw_flags[R3_SURFACES_DRAW_FLAG]) DrawFaces(draw_flags);
+  else if (draw_flags[R3_EDGES_DRAW_FLAG]) DrawEdges(draw_flags);
+  else DrawVertices(draw_flags);
 } 
+
 
 
 ////////////////////////////////////////////////////////////////////////

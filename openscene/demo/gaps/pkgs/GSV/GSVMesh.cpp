@@ -244,7 +244,6 @@ LoadScan(GSVScan *scan,
 
   // Create mesh
   int vertex_count = 0;
-  RNScalar travel_distance = 0;
   prev_viewpoint = scan->Scanline(0)->Pose().Viewpoint();
   for (int ie = 0; ie < scan->NScanlines(); ie++) {
     GSVScanline *scanline = scan->Scanline(ie);
@@ -252,7 +251,6 @@ LoadScan(GSVScan *scan,
     const R3Point& viewpoint = pose.Viewpoint();
     RNLength movement = R3Distance(viewpoint, prev_viewpoint);
     if (movement < min_viewpoint_movement) continue;
-    travel_distance += movement;
     prev_viewpoint = viewpoint;
     const R3Vector& towards = pose.Towards();
     R3Vector up = pose.Up();
@@ -673,10 +671,10 @@ CreateVertex(const R3Point& position, const R3Vector& normal, R3MeshVertex *v)
 ////////////////////////////////////////////////////////////////////////
 
 void GSVMesh::
-Draw(void) const
+Draw(const RNFlags draw_flags) const
 {
   // Draw without texture coordinates by default
-  Draw(FALSE);
+  R3Mesh::Draw(draw_flags);
 }
 
 
@@ -708,18 +706,7 @@ Draw(RNBoolean texture_coordinates) const
     RNGrfxEnd();
   }
   else {
-    RNGrfxBegin(RN_GRFX_TRIANGLES);
-    for (int i = 0; i < NFaces(); i++) {
-      GSVMeshFace *face = Face(i);
-      R3LoadNormal(FaceNormal(face));
-      GSVMeshVertex *v0 = VertexOnFace(face, 0);
-      R3LoadPoint(VertexPosition(v0));
-      GSVMeshVertex *v1 = VertexOnFace(face, 1);
-      R3LoadPoint(VertexPosition(v1));
-      GSVMeshVertex *v2 = VertexOnFace(face, 2);
-      R3LoadPoint(VertexPosition(v2));
-    }
-    RNGrfxEnd();
+    DrawFaces();
   }
 }
 

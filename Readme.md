@@ -107,3 +107,10 @@ Inside the docker you can edit the export files in export folder, and then run o
 ```bash
 bash /export/export_openscene_replica.sh
 ```
+
+### Visualize
+Inside the docker you can run the following to visualize the results
+```bash
+./demo/run_demo
+```
+To change the inputs you can open run_demo

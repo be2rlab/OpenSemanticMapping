@@ -108,6 +108,9 @@ public:
   //// PROPERTY QUERY ////
   ////////////////////////
 
+  // Object selections
+  RNBoolean IsObjectSelected(R3SurfelObject * object) const;
+  
   // Subwindow/menu/manipulator properties
   const char *Message(void) const;
   const R3OrientedBoxManipulator& OBBManipulator(void) const;
@@ -192,7 +195,13 @@ public:
   virtual int RemoveLabelAssignment(R3SurfelLabelAssignment *assignment);
   virtual int EmptyLabelAssignments(void);
 
-  // Object hierarchy functions
+  // Object splitting functions
+  virtual int SplitSelectedObjects(const R3SurfelConstraint& constraint, RNBoolean update_obb_manipulator = TRUE);
+  virtual int SplitSelectedObjects(const R2Point rubber_line_points[2]);
+  virtual int SplitSelectedObjects(const R2Point *rubber_polygon_points, int num_rubber_polygon_points);
+  virtual int SplitSelectedObjects(const R3OrientedBoxManipulator& obb_manipulator);
+
+  // Low-level object hierarchy functions
   virtual R3SurfelLabel *CreateLabel(R3SurfelLabel *parent = NULL, const char *name = NULL);
   virtual R3SurfelObject *CreateObject(R3SurfelObject *parent = NULL, const char *name = NULL);
   virtual int SetObjectParent(R3SurfelObject *object, R3SurfelObject *parent);
@@ -211,6 +220,15 @@ public:
   // Draw functions
   virtual void DrawObjectSelections(void) const;
   virtual void DrawObjectLabels(void) const;
+
+  // Color utility functions
+  // virtual void CreateColor(unsigned char *color, int color_scheme,
+  //   const R3Surfel *surfel, R3SurfelBlock *block, R3SurfelNode *node,
+  //   R3SurfelObject *object, R3SurfelLabel *label) const;
+
+  // Low-level drawing buffer utility functions
+  void ComputeVBOBuffersForSelectedObjects(std::vector<GLfloat>& surfel_positions,
+    std::vector<GLfloat>& surfel_normals, std::vector<GLubyte>& surfel_colors) const;
 
   // Selection utility functions
   virtual int RasterizeObjectMask(unsigned int *object_mask);
@@ -310,6 +328,7 @@ protected:
   
   // Object selections
   RNArray<R3SurfelObject *> selection_objects;
+  RNMap<R3SurfelObject *, RNBoolean> selection_map;
   int selection_visibility;
 
   // Command logging

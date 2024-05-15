@@ -88,8 +88,8 @@ R3SurfelImage(const R3SurfelImage& image)
   rolling_shutter_timestamps[1] = image.rolling_shutter_timestamps[1];
 
   // Copy all channels
-  for (int i = 0; i < channels.NEntries(); i++) {
-    R2Grid *channel = channels.Kth(i);
+  for (int i = 0; i < image.channels.NEntries(); i++) {
+    R2Grid *channel = image.channels.Kth(i);
     if (channel) channels.Insert(new R2Grid(*channel));
     else channels.Insert(NULL);
   }
@@ -227,6 +227,43 @@ TrajectoryDirection(void) const
 // PROPERTY MANIPULATION FUNCTIONS
 ////////////////////////////////////////////////////////////////////////
 
+R3SurfelImage& R3SurfelImage::
+operator=(const R3SurfelImage& image)
+{
+  // Copy properties
+  this->pose = image.pose;
+  this->timestamp = image.timestamp;
+  this->image_width = image.image_width; 
+  this->image_height = image.image_height;
+  this->image_center = image.image_center;
+  this->xfocal = image.xfocal;
+  this->yfocal = image.yfocal;
+  this->distortion_type = image.distortion_type;
+  this->radial_distortion[0] = image.radial_distortion[0];
+  this->radial_distortion[1] = image.radial_distortion[1];
+  this->radial_distortion[2] = image.radial_distortion[2];
+  this->tangential_distortion[0] = image.tangential_distortion[0];
+  this->tangential_distortion[1] = image.tangential_distortion[1];
+  this->rolling_shutter_poses[0] = image.rolling_shutter_poses[0];
+  this->rolling_shutter_poses[1] = image.rolling_shutter_poses[1];
+  this->rolling_shutter_timestamps[0] = image.rolling_shutter_timestamps[0];
+  this->rolling_shutter_timestamps[1] = image.rolling_shutter_timestamps[1];
+  this->name = (image.name) ? RNStrdup(image.name) : NULL;
+  this->flags = 0;
+
+  // Copy all channels
+  for (int i = 0; i < image.channels.NEntries(); i++) {
+    R2Grid *channel = image.channels.Kth(i);
+    if (channel) this->channels.Insert(new R2Grid(*channel));
+    else this->channels.Insert(NULL);
+  }
+
+  // Return this
+  return *this;
+}
+
+
+    
 void R3SurfelImage::
 SetChannel(int channel_index, const R2Grid& channel)
 {
@@ -936,7 +973,7 @@ Print(FILE *fp, const char *prefix, const char *suffix) const
 
 
 void R3SurfelImage::
-Draw(RNFlags flags) const
+Draw(RNFlags flags, RNScalar scale) const
 {
 #if 1
   // Draw towards and up
@@ -945,32 +982,13 @@ Draw(RNFlags flags) const
   const R3Vector towards = Towards();
   const R3Vector up = Up();
   R3LoadPoint(viewpoint);
-  R3LoadPoint(viewpoint + towards);
+  R3LoadPoint(viewpoint + scale * towards);
   R3LoadPoint(viewpoint);
-  R3LoadPoint(viewpoint + 0.5 * up);
+  R3LoadPoint(viewpoint + 0.5 * scale * up);
   RNGrfxEnd();
 #else
-  // Draw camera
-  RNScalar scale = 1.0;
-  R3Point org = Viewpoint() + Towards() * scale;
-  R3Vector dx = Right() * scale * tan(XFOV());
-  R3Vector dy = Up() * scale * tan(YFOV());
-  R3Point ur = org + dx + dy;
-  R3Point lr = org + dx - dy;
-  R3Point ul = org - dx + dy;
-  R3Point ll = org - dx - dy;
-  R3BeginLine();
-  R3LoadPoint(ur);
-  R3LoadPoint(ul);
-  R3LoadPoint(ll);
-  R3LoadPoint(lr);
-  R3LoadPoint(ur);
-  R3LoadPoint(Viewpoint());
-  R3LoadPoint(lr);
-  R3LoadPoint(ll);
-  R3LoadPoint(Viewpoint());
-  R3LoadPoint(ul);
-  R3EndLine();
+  // Draw R3Camera approximation
+  Camera().Draw(scale);
 #endif
 }
 

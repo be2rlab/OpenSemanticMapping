@@ -31,7 +31,7 @@ CCSRCS=$(NAME).cpp \
 # Dependencies
 #
 
-DEPENDENCIES=*.h ../R3Shapes/*.h ../R2Shapes/*.h ../RNBasics/*.h
+PKG_DEPENDENCIES = R3Shapes R2Shapes RNBasics
 
 
 

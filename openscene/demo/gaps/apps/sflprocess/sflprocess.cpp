@@ -757,7 +757,19 @@ LoadImagesFromConfiguration(R3SurfelScene *scene, const char *configuration_file
 
     // Get name
     char name[1025];
-    if (rgbd_image->Name()) strncpy(name, rgbd_image->Name(), 1024);
+    if (rgbd_image->Name() && strcmp(rgbd_image->Name(), "-")) {
+      strncpy(name, rgbd_image->Name(), 1024);
+    }
+    else if (rgbd_image->ColorFilename() && strcmp(rgbd_image->ColorFilename(), "-")) {
+      const char *start = strrchr(rgbd_image->ColorFilename(), '/');
+      if (start) strncpy(name, start+1, 1024);
+      else strncpy(name, rgbd_image->ColorFilename(), 1024);
+    }
+    else if (rgbd_image->DepthFilename() && strcmp(rgbd_image->DepthFilename(), "-")) {
+      const char *start = strrchr(rgbd_image->DepthFilename(), '/');
+      if (start) strncpy(name, start+1, 1024);
+      else strncpy(name, rgbd_image->DepthFilename(), 1024);
+    }
     else sprintf(name, "Image_%d\n", i);
 
     // Get stuff from rgbd image
@@ -867,6 +879,11 @@ LoadLabelList(R3SurfelScene *scene, const char *list_filename, const char *root_
 
       // Update stats
       create_count++;
+    }
+
+    // Adjust color if out of range
+    if (RNIsGreater(r,1) || RNIsGreater(g,1) || RNIsGreater(b,1)) {
+      r /= 255.0; g /= 255.0; b /= 255.0;
     }
 
     // Set label properties
@@ -1135,6 +1152,65 @@ OverwriteSurfelCategoryIdentifiers(R3SurfelScene *scene, const char *filename)
         if (surfel_identifier >= category_identifiers.size()) continue;
         unsigned int old_attribute = block->SurfelAttribute(k);
         unsigned int new_category_identifier = category_identifiers[surfel_identifier];
+        unsigned int new_attribute = (old_attribute & 0xFFFFFF00) | (new_category_identifier & 0xFF);
+        block->SetSurfelAttribute(k, new_attribute);
+      }
+      database->ReleaseBlock(block);
+    }
+  }
+
+  // Return success
+  return 1;
+}
+
+
+
+static int
+OverwriteSurfelCategoryIdentifiersByColorLookup(R3SurfelScene *scene)
+{
+  // Get convenient variables
+  R3SurfelTree *tree = scene->Tree();
+  if (!tree) return 0;
+  R3SurfelDatabase *database = tree->Database();
+  if (!database) return 0;
+
+  // Create map from colors to category identifiers
+  RNMap<unsigned int, int> encoded_color_to_category_identifier;
+  for (int i = 0; i < scene->NLabels(); i++) {
+    R3SurfelLabel *label = scene->Label(i);
+    int category_identifier = label->Identifier();
+    RNRgb color = label->Color();
+    unsigned int r = 255.0 * color.R();
+    unsigned int g = 255.0 * color.G();
+    unsigned int b = 255.0 * color.B();
+    unsigned int encoded_color = 0;
+    encoded_color |= r & 0xFF;
+    encoded_color |= (g & 0xFF) << 8;
+    encoded_color |= (b & 0xFF) << 16;
+    encoded_color_to_category_identifier.Insert(encoded_color, category_identifier);
+  }
+  
+  // Overwrite category identifiers by reverse mapping from colors
+  for (int i = 0; i < tree->NNodes(); i++) {
+    R3SurfelNode *node = tree->Node(i);
+    if (node->NParts() > 0) continue;
+    for (int j = 0; j < node->NBlocks(); j++) {
+      R3SurfelBlock *block = node->Block(j);
+      database->ReadBlock(block);
+      for (int k = 0; k < block->NSurfels(); k++) {
+        const R3Surfel *surfel = block->Surfel(k);
+        unsigned int r = surfel->R();
+        unsigned int g = surfel->G();
+        unsigned int b = surfel->B();
+        unsigned int encoded_color = 0;
+        encoded_color |= r & 0xFF;
+        encoded_color |= (g & 0xFF) << 8;
+        encoded_color |= (b & 0xFF) << 16;
+        unsigned int new_category_identifier = 255;
+        int category_identifier = 255;
+        if (encoded_color_to_category_identifier.Find(encoded_color, &category_identifier)) 
+          new_category_identifier = category_identifier;
+        unsigned int old_attribute = surfel->Attribute();
         unsigned int new_attribute = (old_attribute & 0xFFFFFF00) | (new_category_identifier & 0xFF);
         block->SetSurfelAttribute(k, new_attribute);
       }
@@ -2218,7 +2294,7 @@ CreatePlanarObjects(R3SurfelScene *scene,
 
   // Create planar objects 
   RNArray<R3SurfelObject *> *objects = CreatePlanarObjects(scene, 
-    source_node, NULL, parent_object, parent_node,                                                   
+    source_node, NULL, parent_object, parent_node,
     max_neighbors, max_neighbor_distance, 
     max_offplane_distance, max_normal_angle,
     min_area, min_density, min_points, 
@@ -2383,6 +2459,27 @@ ParseConstraint(int& argc, char **& argv)
     argc--; argv++; double z2 = atof(*argv);
     R3Box box(x1, y1, z1, x2, y2, z2);
     R3SurfelBoxConstraint *constraint = new R3SurfelBoxConstraint(box);
+    return constraint;
+  }
+  else if (!strcmp(constraint_type, "OrientedBoundingBox")) {
+    // Read bounding box coordinates
+    argc--; argv++; double cx = atof(*argv);
+    argc--; argv++; double cy = atof(*argv);
+    argc--; argv++; double cz = atof(*argv);
+    argc--; argv++; double ax1 = atof(*argv);
+    argc--; argv++; double ay1 = atof(*argv);
+    argc--; argv++; double az1 = atof(*argv);
+    argc--; argv++; double ax2 = atof(*argv);
+    argc--; argv++; double ay2 = atof(*argv);
+    argc--; argv++; double az2 = atof(*argv);
+    argc--; argv++; double r1 = atof(*argv);
+    argc--; argv++; double r2 = atof(*argv);
+    argc--; argv++; double r3 = atof(*argv);
+    R3Point center(cx, cy, cz);
+    R3Vector axis1(ax1, ay1, az1);
+    R3Vector axis2(ax2, ay2, az2);
+    R3OrientedBox obb(center, axis1, axis2, r1, r2, r3);
+    R3SurfelOrientedBoxConstraint *constraint = new R3SurfelOrientedBoxConstraint(obb);
     return constraint;
   }
   else if (!strcmp(constraint_type, "OverheadGrid")) {
@@ -2620,6 +2717,10 @@ int main(int argc, char **argv)
     else if (!strcmp(*argv, "-overwrite_surfel_category_identifiers")) { 
       argc--; argv++; const char *category_identifier_filename = *argv; 
       if (!OverwriteSurfelCategoryIdentifiers(scene, category_identifier_filename)) exit(-1);
+      noperations++;
+    }
+    else if (!strcmp(*argv, "-overwrite_surfel_category_identifiers_by_color_lookup")) { 
+      if (!OverwriteSurfelCategoryIdentifiersByColorLookup(scene)) exit(-1);
       noperations++;
     }
     else if (!strcmp(*argv, "-cull_box")) { 

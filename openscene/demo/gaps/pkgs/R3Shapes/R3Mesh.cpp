@@ -31,6 +31,16 @@ R3Mesh(void)
   : vertex_block(NULL),
     edge_block(NULL),
     face_block(NULL),
+    vbo_face_position_buffer(0),
+    vbo_face_normal_buffer(0),
+    vbo_face_texcoord_buffer(0),
+    vbo_face_rgb_color_buffer(0),
+    vbo_face_pick_color_buffer(0),
+    vbo_vertex_position_buffer(0),
+    vbo_vertex_normal_buffer(0),
+    vbo_vertex_texcoord_buffer(0),
+    vbo_vertex_rgb_color_buffer(0),
+    vbo_vertex_pick_color_buffer(0),
     bbox(R3null_box),
     data(NULL)
 {
@@ -48,6 +58,16 @@ R3Mesh(const R3Mesh& mesh)
   : vertex_block(NULL),
     edge_block(NULL),
     face_block(NULL),
+    vbo_face_position_buffer(0),
+    vbo_face_normal_buffer(0),
+    vbo_face_texcoord_buffer(0),
+    vbo_face_rgb_color_buffer(0),
+    vbo_face_pick_color_buffer(0),
+    vbo_vertex_position_buffer(0),
+    vbo_vertex_normal_buffer(0),
+    vbo_vertex_texcoord_buffer(0),
+    vbo_vertex_rgb_color_buffer(0),
+    vbo_vertex_pick_color_buffer(0),
     bbox(mesh.bbox),
     data(NULL)
 {
@@ -855,6 +875,9 @@ SetVertexPosition(R3MeshVertex *v, const R3Point& position)
 
   // Update bounding box
   bbox.Union(position);
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -1100,6 +1123,9 @@ FindConnectedFaces(R3MeshFace *seed, RNArray<R3MeshFace *>& faces)
 void R3Mesh::
 Empty(void)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Delete all faces, edges, vertices
   while (NFaces() > 0) DeleteFace(Face(0));
   while (NEdges() > 0) DeleteEdge(Edge(0));
@@ -1232,6 +1258,9 @@ AddRandomNoise(RNScalar factor)
     R3MeshFace *face = Face(i);
     face->flags.Remove(R3_MESH_FACE_PLANE_UPTODATE | R3_MESH_FACE_BBOX_UPTODATE);
   }
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -1261,6 +1290,9 @@ Inflate(RNScalar factor)
     R3MeshFace *face = Face(i);
     face->flags.Remove(R3_MESH_FACE_PLANE_UPTODATE | R3_MESH_FACE_BBOX_UPTODATE);
   }
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -1288,6 +1320,9 @@ Transform(const R3Transformation& transformation)
     R3MeshFace *face = Face(i);
     face->flags.Remove(R3_MESH_FACE_PLANE_UPTODATE | R3_MESH_FACE_BBOX_UPTODATE);
   }
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -1300,6 +1335,9 @@ Transform(const R3Transformation& transformation)
 R3MeshVertex *R3Mesh::
 CreateVertex(const R3MeshVertex& source_vertex, R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create vertex
   if (!v) {
     v = new R3MeshVertex();
@@ -1327,6 +1365,9 @@ CreateVertex(const R3MeshVertex& source_vertex, R3MeshVertex *v)
 R3MeshVertex *R3Mesh::
 CreateVertex(const R3Point& position, R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create vertex
   if (!v) {
     v = new R3MeshVertex();
@@ -1351,6 +1392,9 @@ CreateVertex(const R3Point& position, R3MeshVertex *v)
 R3MeshVertex *R3Mesh::
 CreateVertex(const R3Point& position, const R3Vector& normal, R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create vertex
   if (!v) {
     v = new R3MeshVertex();
@@ -1376,6 +1420,9 @@ CreateVertex(const R3Point& position, const R3Vector& normal, R3MeshVertex *v)
 R3MeshVertex *R3Mesh::
 CreateVertex(const R3Point& position, const R3Vector& normal, const RNRgb& color, R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create vertex
   if (!v) {
     v = new R3MeshVertex();
@@ -1402,6 +1449,9 @@ CreateVertex(const R3Point& position, const R3Vector& normal, const RNRgb& color
 R3MeshVertex *R3Mesh::
 CreateVertex(const R3Point& position, const R3Vector& normal, const RNRgb& color, const R2Point& texcoords, R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create vertex
   if (!v) {
     v = new R3MeshVertex();
@@ -1429,6 +1479,9 @@ CreateVertex(const R3Point& position, const R3Vector& normal, const RNRgb& color
 R3MeshEdge *R3Mesh::
 CreateEdge(R3MeshVertex *v1, R3MeshVertex *v2, R3MeshEdge *e)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create edge
   if (!e) {
     e = new R3MeshEdge();
@@ -1500,6 +1553,9 @@ CreateFace(R3MeshVertex *v1, R3MeshVertex *v2, R3MeshVertex *v3,
   if ((e3->vertex[0] == v3) && e3->face[0]) return NULL;
   if ((e3->vertex[0] == v1) && e3->face[1]) return NULL;
 
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Create face
   if (!f) {
     f = new R3MeshFace();
@@ -1524,6 +1580,9 @@ CreateFace(R3MeshVertex *v1, R3MeshVertex *v2, R3MeshVertex *v3,
 void R3Mesh::
 DeallocateVertex(R3MeshVertex *v)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Remove vertex from mesh array by moving last vertex
   assert(!vertices.IsEmpty());
   R3MeshVertex *tail = vertices.Tail();
@@ -1546,6 +1605,9 @@ DeallocateVertex(R3MeshVertex *v)
 void R3Mesh::
 DeallocateEdge(R3MeshEdge *e)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Remove edge from mesh array by moving last edge
   assert(!edges.IsEmpty());
   R3MeshEdge *tail = edges.Tail();
@@ -1568,6 +1630,9 @@ DeallocateEdge(R3MeshEdge *e)
 void R3Mesh::
 DeallocateFace(R3MeshFace *f)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Remove face from mesh array by moving last face
   assert(!faces.IsEmpty());
   R3MeshFace *tail = faces.Tail();
@@ -1677,6 +1742,9 @@ R3MeshVertex* R3Mesh::
 MergeVertex(R3MeshVertex *v1, R3MeshVertex *v2)
 {
 #if 0
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Check if there is an edge between the vertices
   // R3MeshEdge *e = EdgeBetweenVertices(v1, v2);
   // if (e) return CollapseEdge(e, v1->position);
@@ -2068,6 +2136,7 @@ CollapseEdge(R3MeshEdge *edge)
 R3MeshVertex *R3Mesh::
 CollapseFace(R3MeshFace *f, const R3Point& point)
 {
+  // Collapse face into single point
   R3MeshVertex *v0 = VertexOnFace(f, 0);
   R3MeshVertex *v1 = VertexOnFace(f, 1);
   R3MeshVertex *v2 = VertexOnFace(f, 2);
@@ -2235,6 +2304,9 @@ SubdivideEdge(R3MeshEdge *e)
 R3MeshVertex *R3Mesh::
 SplitFace(R3MeshFace *f, const R3Point& point, R3MeshFace **f0, R3MeshFace **f1, R3MeshFace **f2)
 {
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Find vertices/edges bounding face
   R3MeshVertex *v0 = VertexOnFace(f, 0);
   R3MeshEdge *e0 = EdgeOnFace(f, v0, RN_CCW);
@@ -2398,6 +2470,9 @@ SwapEdge(R3MeshEdge *edge)
   UpdateFacePlane(f[1]);
   UpdateFaceBBox(f[1]);
 
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Return success
   return 1;
 }
@@ -2416,6 +2491,9 @@ FlipEdge(R3MeshEdge *e)
   R3MeshFace *f = e->face[0];
   e->face[0] = e->face[1];
   e->face[1] = f;
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -2435,6 +2513,9 @@ FlipFace(R3MeshFace *f)
   R3MeshEdge *eswap = f->edge[0];
   f->edge[0] = f->edge[1];
   f->edge[1] = eswap;
+
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
 }
 
 
@@ -2611,28 +2692,28 @@ SubdivideFaces(void)
 // EDGE SWAPPING FUNCTIONS
 ////////////////////////////////////////////////////////////////////////
 
-static RNScalar 
-R3MeshEdgeSwapValue(R3Mesh *mesh, R3MeshEdge *e)
+RNAngle R3Mesh:: 
+EdgeSwapAngleImprovement(const R3MeshEdge *edge) const
 {
   // Get/check faces
-  R3MeshFace *f0 = mesh->FaceOnEdge(e, 0);
-  R3MeshFace *f1 = mesh->FaceOnEdge(e, 1);
+  R3MeshFace *f0 = FaceOnEdge(edge, 0);
+  R3MeshFace *f1 = FaceOnEdge(edge, 1);
   if (!f0 || !f1) return -RN_INFINITY;
 
   // Get/check vertices
-  R3MeshVertex *v0 = mesh->VertexOnEdge(e, 0);
-  R3MeshVertex *v1 = mesh->VertexOnEdge(e, 1);
-  R3MeshVertex *vf0 = mesh->VertexAcrossFace(f0, e);
-  R3MeshVertex *vf1 = mesh->VertexAcrossFace(f1, e);
-  if (mesh->EdgeBetweenVertices(vf0, vf1)) return -RN_INFINITY;
+  R3MeshVertex *v0 = VertexOnEdge(edge, 0);
+  R3MeshVertex *v1 = VertexOnEdge(edge, 1);
+  R3MeshVertex *vf0 = VertexAcrossFace(f0, edge);
+  R3MeshVertex *vf1 = VertexAcrossFace(f1, edge);
+  if (EdgeBetweenVertices(vf0, vf1)) return -RN_INFINITY;
 
   // Check if swap would flip face normals
-  R3Vector n0 = mesh->FaceNormal(f0);
-  R3Vector n1 = mesh->FaceNormal(f1);
-  const R3Point& p0 = mesh->VertexPosition(v0);
-  const R3Point& p1 = mesh->VertexPosition(v1);
-  const R3Point& pf0 = mesh->VertexPosition(vf0);
-  const R3Point& pf1 = mesh->VertexPosition(vf1);
+  R3Vector n0 = FaceNormal(f0);
+  R3Vector n1 = FaceNormal(f1);
+  const R3Point& p0 = VertexPosition(v0);
+  const R3Point& p1 = VertexPosition(v1);
+  const R3Point& pf0 = VertexPosition(vf0);
+  const R3Point& pf1 = VertexPosition(vf1);
   R3Vector vec00 = pf0 - p0;
   R3Vector vec01 = pf1 - p0;
   R3Vector vec10 = pf0 - p1;
@@ -2684,7 +2765,7 @@ SwapEdges(RNAngle min_angle_improvement)
   RNScalar *edge_values = new RNScalar [ NEdges() ];
   for (int i = 0; i < NEdges(); i++) {
     R3MeshEdge *edge = Edge(i);
-    edge_values[i] = R3MeshEdgeSwapValue(this, edge);
+    edge_values[i] = EdgeSwapAngleImprovement(edge);
     if (edge_values[i] < min_angle_improvement) continue;
     heap.Push(&edge_values[i]);
   }
@@ -2698,7 +2779,7 @@ SwapEdges(RNAngle min_angle_improvement)
     if (*edge_value < min_angle_improvement) break;
 
     // Check current edge value
-    RNScalar current_value = R3MeshEdgeSwapValue(this, edge);
+    RNScalar current_value = EdgeSwapAngleImprovement(edge);
     if (current_value != edge_values[edge_index]) {
       edge_values[edge_index] = current_value;
       if (current_value >= min_angle_improvement) heap.Push(&edge_values[edge_index]);
@@ -2709,7 +2790,7 @@ SwapEdges(RNAngle min_angle_improvement)
     if (!SwapEdge(edge)) continue;
 
     // Update edge value
-    edge_values[edge_index] = -current_value; // R3MeshEdgeSwapValue(this, edge);
+    edge_values[edge_index] = -current_value; // EdgeSwapAngleImprovement(edge);
 
     // Update neighbors
     for (int i = 0; i < 2; i++) {
@@ -2719,7 +2800,7 @@ SwapEdges(RNAngle min_angle_improvement)
         R3MeshEdge *neighbor_edge = EdgeOnFace(face, edge, j);
         int neighbor_index = EdgeID(neighbor_edge);
         RNScalar old_neighbor_value = edge_values[neighbor_index];
-        edge_values[neighbor_index] = R3MeshEdgeSwapValue(this, neighbor_edge);
+        edge_values[neighbor_index] = EdgeSwapAngleImprovement(neighbor_edge);
         if (old_neighbor_value >= min_angle_improvement) {
           if (edge_values[neighbor_index] >= min_angle_improvement) heap.Update(&edge_values[neighbor_index]);
           else heap.Remove(&edge_values[neighbor_index]);
@@ -3154,11 +3235,367 @@ operator=(const R3Mesh& mesh)
     this->SetFaceCategory(copy_face, mesh.FaceCategory(face));
   }
 
+  // Invalidate GL buffer objects
+  InvalidateGLBufferObjects();
+
   // Return this
   return *this;
 }
 
 
+
+
+ ////////////////////////////////////////////////////////////////////////
+// GL BUFFER OBJECT ACCESS
+////////////////////////////////////////////////////////////////////////
+
+unsigned int R3Mesh::
+GLFacePositionBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NFaces() == 0) return 0;
+  
+  // Update position buffer
+  if (vbo_face_position_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_face_position_buffer);
+    if (vbo_face_position_buffer > 0) {
+      std::vector<GLfloat> positions;
+      for (int i = 0; i < NFaces(); i++) {
+        R3MeshFace *face = Face(i);
+        for (int j = 0; j < 3; j++){
+          R3MeshVertex *vertex = VertexOnFace(face, j);
+          const R3Point& position = VertexPosition(vertex);
+          positions.push_back(position.X());
+          positions.push_back(position.Y());
+          positions.push_back(position.Z());
+        }
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_position_buffer);
+      glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(GLfloat), &positions[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return position buffer identifier
+  return vbo_face_position_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLFaceNormalBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NFaces() == 0) return 0;
+  
+  // Update normal buffer
+  if (vbo_face_normal_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_face_normal_buffer);
+    if (vbo_face_normal_buffer > 0) {
+      std::vector<GLfloat> normals;
+      for (int i = 0; i < NFaces(); i++) {
+        R3MeshFace *face = Face(i);
+        for (int j = 0; j < 3; j++){
+          R3MeshVertex *vertex = VertexOnFace(face, j);
+          const R3Vector& normal = VertexNormal(vertex);
+          normals.push_back(normal.X());
+          normals.push_back(normal.Y());
+          normals.push_back(normal.Z());
+        }
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_normal_buffer);
+      glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(GLfloat), &normals[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return normal buffer identifier
+  return vbo_face_normal_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLFaceTextureCoordBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NFaces() == 0) return 0;
+
+  // Update texcoord buffer
+  if (vbo_face_texcoord_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_face_texcoord_buffer);
+    if (vbo_face_texcoord_buffer > 0) {
+      std::vector<GLfloat> texcoords;
+      for (int i = 0; i < NFaces(); i++) {
+        R3MeshFace *face = Face(i);
+        for (int j = 0; j < 3; j++){
+          R3MeshVertex *vertex = VertexOnFace(face, j);
+          const R2Point& texcoord = VertexTextureCoords(vertex);
+          texcoords.push_back(texcoord.X());
+          texcoords.push_back(texcoord.Y());
+        }
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_texcoord_buffer);
+      glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(GLfloat), &texcoords[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return texcoord buffer identifier
+  return vbo_face_texcoord_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLFaceRgbColorBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NFaces() == 0) return 0;
+
+  // Update rgb color buffer
+  if (vbo_face_rgb_color_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_face_rgb_color_buffer);
+    if (vbo_face_rgb_color_buffer > 0) {
+      std::vector<GLubyte> rgb_colors;
+      for (int i = 0; i < NFaces(); i++) {
+        R3MeshFace *face = Face(i);
+        for (int j = 0; j < 3; j++){
+          R3MeshVertex *vertex = VertexOnFace(face, j);
+          const RNRgb& rgb_color = VertexColor(vertex);
+          rgb_colors.push_back(255.0 * rgb_color.R());
+          rgb_colors.push_back(255.0 * rgb_color.G());
+          rgb_colors.push_back(255.0 * rgb_color.B());
+          rgb_colors.push_back(255);
+        }
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_rgb_color_buffer);
+      glBufferData(GL_ARRAY_BUFFER, rgb_colors.size() * sizeof(GLubyte), &rgb_colors[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return rgb color buffer identifier
+  return vbo_face_rgb_color_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLFacePickColorBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NFaces() == 0) return 0;
+
+  // Update pick color buffer
+  if (vbo_face_pick_color_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_face_pick_color_buffer);
+    if (vbo_face_pick_color_buffer > 0) {
+      std::vector<GLubyte> pick_colors;
+      for (int i = 0; i < NFaces(); i++) {
+        for (int j = 0; j < 3; j++){
+          unsigned char pick_color[4];
+          EncodePickColor(i, 255, pick_color);
+          pick_colors.push_back(pick_color[0]);
+          pick_colors.push_back(pick_color[1]);
+          pick_colors.push_back(pick_color[2]);
+          pick_colors.push_back(pick_color[3]);
+        }
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_pick_color_buffer);
+      glBufferData(GL_ARRAY_BUFFER, pick_colors.size() * sizeof(GLubyte), &pick_colors[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return pick color buffer identifier
+  return vbo_face_pick_color_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLVertexPositionBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NVertices() == 0) return 0;
+  
+  // Update position buffer
+  if (vbo_vertex_position_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_vertex_position_buffer);
+    if (vbo_vertex_position_buffer > 0) {
+      std::vector<GLfloat> positions;
+      for (int i = 0; i < NVertices(); i++) {
+        R3MeshVertex *vertex = Vertex(i);
+        const R3Point& position = VertexPosition(vertex);
+        positions.push_back(position.X());
+        positions.push_back(position.Y());
+        positions.push_back(position.Z());
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_position_buffer);
+      glBufferData(GL_ARRAY_BUFFER, positions.size() * sizeof(GLfloat), &positions[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return position buffer identifier
+  return vbo_vertex_position_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLVertexNormalBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NVertices() == 0) return 0;
+  
+  // Update normal buffer
+  if (vbo_vertex_normal_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_vertex_normal_buffer);
+    if (vbo_vertex_normal_buffer > 0) {
+      std::vector<GLfloat> normals;
+      for (int i = 0; i < NVertices(); i++) {
+        R3MeshVertex *vertex = Vertex(i);
+        const R3Vector& normal = VertexNormal(vertex);
+        normals.push_back(normal.X());
+        normals.push_back(normal.Y());
+        normals.push_back(normal.Z());
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_normal_buffer);
+      glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(GLfloat), &normals[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return normal buffer identifier
+  return vbo_vertex_normal_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLVertexTextureCoordBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NVertices() == 0) return 0;
+
+  // Update texcoord buffer
+  if (vbo_vertex_texcoord_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_vertex_texcoord_buffer);
+    if (vbo_vertex_texcoord_buffer > 0) {
+      std::vector<GLfloat> texcoords;
+      for (int i = 0; i < NVertices(); i++) {
+        R3MeshVertex *vertex = Vertex(i);
+        const R2Point& texcoord = VertexTextureCoords(vertex);
+        texcoords.push_back(texcoord.X());
+        texcoords.push_back(texcoord.Y());
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_texcoord_buffer);
+      glBufferData(GL_ARRAY_BUFFER, texcoords.size() * sizeof(GLfloat), &texcoords[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return texcoord buffer identifier
+  return vbo_vertex_texcoord_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLVertexRgbColorBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NVertices() == 0) return 0;
+
+  // Update rgb color buffer
+  if (vbo_vertex_rgb_color_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_vertex_rgb_color_buffer);
+    if (vbo_vertex_rgb_color_buffer > 0) {
+      std::vector<GLubyte> rgb_colors;
+      for (int i = 0; i < NVertices(); i++) {
+        R3MeshVertex *vertex = Vertex(i);
+        const RNRgb& rgb_color = VertexColor(vertex);
+        rgb_colors.push_back(255.0 * rgb_color.R());
+        rgb_colors.push_back(255.0 * rgb_color.G());
+        rgb_colors.push_back(255.0 * rgb_color.B());
+        rgb_colors.push_back(255);
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_rgb_color_buffer);
+      glBufferData(GL_ARRAY_BUFFER, rgb_colors.size() * sizeof(GLubyte), &rgb_colors[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return rgb color buffer identifier
+  return vbo_vertex_rgb_color_buffer;
+}
+
+
+
+unsigned int R3Mesh::
+GLVertexPickColorBufferObject(void) const
+{
+  // Check if nothing to be done
+  if (NVertices() == 0) return 0;
+
+  // Update pick color buffer
+  if (vbo_vertex_pick_color_buffer == 0) {
+    glGenBuffers(1, (GLuint *) &vbo_vertex_pick_color_buffer);
+    if (vbo_vertex_pick_color_buffer > 0) {
+      std::vector<GLubyte> pick_colors;
+      for (int i = 0; i < NVertices(); i++) {
+        unsigned char pick_color[4];
+        EncodePickColor(i, 255, pick_color);
+        pick_colors.push_back(pick_color[0]);
+        pick_colors.push_back(pick_color[1]);
+        pick_colors.push_back(pick_color[2]);
+        pick_colors.push_back(pick_color[3]);
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_pick_color_buffer);
+      glBufferData(GL_ARRAY_BUFFER, pick_colors.size() * sizeof(GLubyte), &pick_colors[0], GL_STATIC_DRAW);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+  }
+
+  // Return pick color buffer identifier
+  return vbo_vertex_pick_color_buffer;
+}
+
+
+
+void R3Mesh::
+InvalidateGLBufferObjects(void)
+{
+  // Delete face buffers
+  if (vbo_face_position_buffer > 0) glDeleteBuffers(1, &vbo_face_position_buffer);
+  if (vbo_face_normal_buffer > 0) glDeleteBuffers(1, &vbo_face_normal_buffer);
+  if (vbo_face_texcoord_buffer > 0) glDeleteBuffers(1, &vbo_face_texcoord_buffer);
+  if (vbo_face_rgb_color_buffer > 0) glDeleteBuffers(1, &vbo_face_rgb_color_buffer);
+  if (vbo_face_pick_color_buffer > 0) glDeleteBuffers(1, &vbo_face_pick_color_buffer);
+
+  // Delete vertex buffers
+  if (vbo_vertex_position_buffer > 0) glDeleteBuffers(1, &vbo_vertex_position_buffer);
+  if (vbo_vertex_normal_buffer > 0) glDeleteBuffers(1, &vbo_vertex_normal_buffer);
+  if (vbo_vertex_texcoord_buffer > 0) glDeleteBuffers(1, &vbo_vertex_texcoord_buffer);
+  if (vbo_vertex_rgb_color_buffer > 0) glDeleteBuffers(1, &vbo_vertex_rgb_color_buffer);
+  if (vbo_vertex_pick_color_buffer > 0) glDeleteBuffers(1, &vbo_vertex_pick_color_buffer);
+
+  // Zero out face buffer identifiers
+  vbo_face_position_buffer = 0;
+  vbo_face_normal_buffer = 0;
+  vbo_face_texcoord_buffer = 0;
+  vbo_face_rgb_color_buffer = 0;
+  vbo_face_pick_color_buffer = 0;
+
+  // Zero out vertex buffer identifiers
+  vbo_vertex_position_buffer = 0;
+  vbo_vertex_normal_buffer = 0;
+  vbo_vertex_texcoord_buffer = 0;
+  vbo_vertex_rgb_color_buffer = 0;
+  vbo_vertex_pick_color_buffer = 0;
+}
 
 
 
@@ -3167,38 +3604,124 @@ operator=(const R3Mesh& mesh)
 ////////////////////////////////////////////////////////////////////////
 
 void R3Mesh::
-DrawVertices(void) const
+DrawVertices(const RNFlags draw_flags) const
 {
-  // Draw all vertices
-  for (int i = 0; i < vertices.NEntries(); i++)
-    DrawVertex(vertices[i]);
+  // Bind position buffer
+  if (GLVertexPositionBufferObject() <= 0) return;
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_position_buffer);
+  glVertexPointer(3, GL_FLOAT, 0, 0);
+  glEnableClientState(GL_VERTEX_ARRAY);
+  
+  // Bind vertex normal buffer
+  if (draw_flags[R3_VERTEX_NORMALS_DRAW_FLAG]) {
+    if (GLVertexNormalBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_normal_buffer);
+      glNormalPointer(GL_FLOAT, 0, 0);
+      glEnableClientState(GL_NORMAL_ARRAY);
+    }
+  }
+  
+  // Bind vertex texcoord buffer
+  if (draw_flags & R3_VERTEX_TEXTURE_COORDS_DRAW_FLAG) {  
+    if (GLVertexTextureCoordBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_texcoord_buffer);
+      glTexCoordPointer(2, GL_FLOAT, 0, 0);
+      glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+  }
+  
+  // Bind vertex color buffer
+  if (draw_flags[R3_VERTEX_PICK_DRAW_FLAG]) {
+    if (GLVertexPickColorBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_pick_color_buffer);
+      glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+      glEnableClientState(GL_COLOR_ARRAY);
+    }
+  }
+  else if (draw_flags[R3_VERTEX_COLORS_DRAW_FLAG]) {
+    if (GLVertexRgbColorBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_vertex_rgb_color_buffer);
+      glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+      glEnableClientState(GL_COLOR_ARRAY);
+    }
+  }
+  
+  // Draw vertices
+  glDrawArrays(GL_POINTS, 0, NVertices());
+
+  // Reset everything
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glDisableClientState(GL_VERTEX_ARRAY);
+  glDisableClientState(GL_NORMAL_ARRAY);
+  glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+  glDisableClientState(GL_COLOR_ARRAY);
 }
 
 
 
 void R3Mesh::
-DrawEdges(void) const
+DrawEdges(const R3DrawFlags draw_flags) const
 {
   // Draw all edges
-  for (int i = 0; i < edges.NEntries(); i++)
-    DrawEdge(edges[i]);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  DrawFaces(draw_flags);
+  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 
 
 void R3Mesh::
-DrawFaces(void) const
+DrawFaces(const R3DrawFlags draw_flags) const
 {
-  // Draw all faces
-  RNGrfxBegin(RN_GRFX_TRIANGLES);
-  for (int i = 0; i < faces.NEntries(); i++) {
-    R3MeshFace *f = faces.Kth(i);
-    R3LoadNormal(FaceNormal(f));
-    R3LoadPoint(f->vertex[0]->position);
-    R3LoadPoint(f->vertex[1]->position);
-    R3LoadPoint(f->vertex[2]->position);
+  // Bind face position buffer
+  if (GLFacePositionBufferObject() <= 0) return;
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_face_position_buffer);
+  glVertexPointer(3, GL_FLOAT, 0, 0);
+  glEnableClientState(GL_VERTEX_ARRAY);
+  
+  // Bind face normal buffer
+  if (draw_flags & R3_SURFACE_NORMALS_DRAW_FLAG) {  
+    if (GLFaceNormalBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_normal_buffer);
+      glNormalPointer(GL_FLOAT, 0, 0);
+      glEnableClientState(GL_NORMAL_ARRAY);
+    }
   }
-  RNGrfxEnd();
+  
+  // Bind face texcoord buffer
+  if (draw_flags & R3_SURFACE_TEXTURE_DRAW_FLAG) {  
+    if (GLFaceTextureCoordBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_texcoord_buffer);
+      glTexCoordPointer(2, GL_FLOAT, 0, 0);
+      glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    }
+  }
+  
+  // Bind face color buffer
+  if (draw_flags[R3_SURFACE_PICK_DRAW_FLAG]) {
+    if (GLFacePickColorBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_pick_color_buffer);
+      glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+      glEnableClientState(GL_COLOR_ARRAY);
+    }
+  }
+  else if (draw_flags[R3_VERTEX_COLORS_DRAW_FLAG]) {
+    if (GLFaceRgbColorBufferObject() > 0) {
+      glBindBuffer(GL_ARRAY_BUFFER, vbo_face_rgb_color_buffer);
+      glColorPointer(4, GL_UNSIGNED_BYTE, 0, 0);
+      glEnableClientState(GL_COLOR_ARRAY);
+    }
+  }
+  
+  // Draw vertices
+  glDrawArrays(GL_TRIANGLES, 0, 3 * NFaces());
+
+  // Reset everything
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glDisableClientState(GL_VERTEX_ARRAY);
+  glDisableClientState(GL_NORMAL_ARRAY);
+  glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+  glDisableClientState(GL_COLOR_ARRAY);
 }
 
 
@@ -3208,14 +3731,7 @@ DrawVertexIDs(void) const
 {
   // Draw all vertex IDs
   glDisable(GL_LIGHTING);
-  for (int i = 0; i < vertices.NEntries(); i++) {
-    assert(vertices[i]->id == i);
-    unsigned char r = ((i << 16) & 0xFF);
-    unsigned char g = (i << 8) & 0xFF;
-    unsigned char b = (i << 0) & 0xFF;
-    RNLoadRgb(r, g, b);
-    DrawVertex(vertices[i]);
-  }
+  DrawVertices(R3_VERTEX_PICK_DRAW_FLAG);
   glEnable(GL_LIGHTING);
 }
 
@@ -3226,13 +3742,16 @@ DrawEdgeIDs(void) const
 {
   // Draw all edge IDs
   glDisable(GL_LIGHTING);
+  RNGrfxBegin(RN_GRFX_LINES);
   for (int i = 0; i < edges.NEntries(); i++) {
-    assert(edges[i]->id == i);
-    unsigned char r = ((i << 16) & 0xFF);
-    unsigned char g = (i << 8) & 0xFF;
-    unsigned char b = (i << 0) & 0xFF;
+    R3MeshEdge *e = edges.Kth(i);
+    unsigned int index = i+1;    
+    unsigned char r = (index >> 0) & 0xFF;
+    unsigned char g = (index >> 8) & 0xFF;
+    unsigned char b = (index >> 16) & 0xFF;
     RNLoadRgb(r, g, b);
-    DrawEdge(edges[i]);
+    R3LoadPoint(VertexPosition(VertexOnEdge(e, 0)));
+    R3LoadPoint(VertexPosition(VertexOnEdge(e, 1)));
   }
   glEnable(GL_LIGHTING);
 }
@@ -3244,14 +3763,7 @@ DrawFaceIDs(void) const
 {
   // Draw all face IDs
   glDisable(GL_LIGHTING);
-  for (int i = 0; i < faces.NEntries(); i++) {
-    assert(faces[i]->id == i);
-    unsigned char r = (i << 16) & 0xFF;
-    unsigned char g = (i << 8) & 0xFF;
-    unsigned char b = (i << 0) & 0xFF;
-    RNLoadRgb(r, g, b);
-    DrawFace(faces[i]);
-  }
+  DrawVertices(R3_SURFACE_PICK_DRAW_FLAG);
   glEnable(GL_LIGHTING);
 }
 
@@ -5242,7 +5754,6 @@ ReadRayFile(const char *filename)
 
   // Read body
   char cmd[128];
-  int triangle_count = 0;
   int command_number = 1;
   RNArray<R3MeshVertex *> degenerate_triangle_vertices;
   while (fscanf(fp, "%s", cmd) == 1) {
@@ -5291,9 +5802,6 @@ ReadRayFile(const char *filename)
 
       // Set face material
       if (face) SetFaceMaterial(face, m);
-
-      // Increment triangle counter
-      triangle_count++;
     }
 	
     // Increment command number
@@ -6227,7 +6735,6 @@ ReadVRMLFile(const char *filename)
 
   // Read file
   char buffer[1024];
-  int line_count = 0;
   RNBoolean coordinate3_active = FALSE;
   RNBoolean coordinate3_point_active = FALSE;
   RNBoolean indexedfaceset_active = FALSE;
@@ -6235,9 +6742,6 @@ ReadVRMLFile(const char *filename)
   RNArray<R3MeshVertex *> vertices;
   RNArray<R3MeshVertex *> degenerate_triangle_vertices;
   while (fgets(buffer, 1023, fp)) {
-    // Increment line counter
-    line_count++;
-
     // Skip white space
     char *bufferp = buffer;
     while (isspace(*bufferp)) bufferp++;
