@@ -111,6 +111,10 @@ bash /export/export_openscene_replica.sh
 ### Visualize
 Inside the docker you can run the following to visualize the results
 ```bash
-./demo/run_demo
+cd ./demo/gaps
+make 
+
+cd ..
+./run_demo
 ```
 To change the inputs you can open run_demo

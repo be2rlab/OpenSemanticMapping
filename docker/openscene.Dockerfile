@@ -22,18 +22,7 @@ RUN pip install -U git+https://github.com/NVIDIA/MinkowskiEngine -v --no-deps --
 RUN pip install -r requirements.txt
 RUN pip install tensorflow
 
-### Prepare for visualization
-RUN apt install unzip -y
-RUN apt install wget -y 
 RUN apt install libglew-dev -y
 
-WORKDIR /opt/src/demo/gaps
-RUN make
-WORKDIR /opt/src/demo/gaps/pkgs/RNNets
-RUN make
-WORKDIR /opt/src/demo/gaps/apps/osview
-RUN make
-
-WORKDIR /opt/src
 
 CMD ["bash"]
