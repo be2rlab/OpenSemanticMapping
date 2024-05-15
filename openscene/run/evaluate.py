@@ -230,7 +230,7 @@ def evaluate(model, val_data_loader, labelset_name='scannet_3d'):
         os.makedirs(args.save_folder, exist_ok=True)
 
     if args.save_feature_as_numpy: # save point features to folder
-        out_root = os.path.commonprefix([args.save_folder, args.model_path])
+        out_root = args.save_folder
         saved_feature_folder = os.path.join(out_root, 'saved_feature')
         os.makedirs(saved_feature_folder, exist_ok=True)
 
@@ -324,7 +324,7 @@ def evaluate(model, val_data_loader, labelset_name='scannet_3d'):
                     predictions = feat_ensemble # if we need to save the features
                 else:
                     raise NotImplementedError
-
+                
                 if args.save_feature_as_numpy:
                     scene_name = val_data_loader.dataset.data_paths[i].split('/')[-1].split('.pth')[0]
                     np.save(os.path.join(saved_feature_folder, '{}_openscene_feat_{}.npy'.format(scene_name, feature_type)), predictions.cpu().numpy())
