@@ -50,26 +50,29 @@ services:
     privileged: true
     command: bash
 
+  openscene:
+    build:
+      context: $ROOT_DIR/
+      dockerfile: $ROOT_DIR/docker/openscene.Dockerfile
+    image: open_semantic/openscene:latest
+    restart: unless-stopped
+    network_mode: host
+    ipc: host
+    environment:
+      - QT_X11_NO_MITSHM=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - DISPLAY=$DISPLAY
+      - VGL_DISPLAY=${RENDER_DISPLAY:-":1"}
+    volumes:
+      - /tmp/.X11-unix/:/tmp/.X11-unix
+      - $ROOT_DIR/openscene:/opt/src
+      - $ASSETS_DIR:/assets
+      - $DATA_DIR:/data/
+      - $ROOT_DIR/export:/export/
+    runtime: nvidia
+    privileged: true
+    command: bash
+
     
-  # concept_fusion:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./concept_fusion.Dockerfile
-  #   image: open_semantic/concept_fusion:latest
-  #   restart: unless-stopped
-  #   network_mode: host
-  #   ipc: host
-  #   environment:
-  #     - QT_X11_NO_MITSHM=1
-  #     - NVIDIA_VISIBLE_DEVICES=all
-  #     - NVIDIA_DRIVER_CAPABILITIES=all
-  #     # - XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
-  #     - DISPLAY=$DISPLAY
-  #     - VGL_DISPLAY=${RENDER_DISPLAY:-":1"}
-  #   volumes:
-  #     - /tmp/.X11-unix/:/tmp/.X11-unix
-  #     - $DATA_DIR/:/mnt/
-  #     - ./:/opt/src
-  #   runtime: nvidia
-  #   privileged: true
-  #   command: bash
+

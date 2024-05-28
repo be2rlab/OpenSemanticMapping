@@ -50,12 +50,13 @@ run-openmask3d:
         $(PARAMETERS) \
         docker compose run openmask3d
 
+build-openscene:
+	cd $(ROOT_DIR) && \
+        $(PARAMETERS) \
+        docker compose build openscene
 
-# build-concept-fusion:
-# 	cd $(ROOT_DIR) && \
-# 	docker compose build concept_fusion
-
-# run-concept-fusion:
-# 	cd $(ROOT_DIR) && \
-# 	$(PARAMETERS) \
-# 	docker compose run concept_fusion
+run-openscene: 
+	 cd $(ROOT_DIR) && \
+        $(PARAMETERS) \
+        docker compose run openscene
+		

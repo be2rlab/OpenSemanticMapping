@@ -1,0 +1,7 @@
+#!/bin/bash
+
+python3 clip_server.py --out_dir tmp&
+
+### Change to your location of .ply(from the original scene) and .npy(in the output folder) files
+./gaps/bin/x86_64/osview /data/room0.ply /export/output/openscene/result_eval/saved_feature/*.npy -v -tcp
+
